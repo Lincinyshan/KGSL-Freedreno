@@ -665,4 +665,5 @@ dri_init_screen(struct dri_screen *screen,
    return dri_fill_in_modes(screen);
 }
 
+
 /* vim: set sw=3 ts=8 sts=3 expandtab: */

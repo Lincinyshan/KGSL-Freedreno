@@ -50,6 +50,29 @@
 #include "loader_dri_helper.h"
 #include "platform_android.h"
 #include "dri_util.h"
+#include "dri_screen.h"
+
+/* FCL: Android 的 Surface 生产端必须先执行 native_window_api_connect(
+ * NATIVE_WINDOW_API_EGL) 才能 dequeueBuffer，这一步平时由厂商 libEGL 代做，
+ * 而 Mesa 的 droid 路径从不做，导致 ANativeWindow_dequeueBuffer() 一直返回
+ * -ENODEV(NO_INIT)，EGLSurface 永远拿不到 buffer。
+ *
+ * libnativewindow.so 里 ANativeWindow_lock/queueBuffer/... 都是
+ * perform(window, op, ...) 的 thunk（例如 lock: ldr x16,[x0,#0x98];
+ * mov w1,#11; br x16），所以 perform 位于 ANativeWindow 偏移 0x98；
+ * op 枚举：SET_USAGE=1, LOCK=11, API_CONNECT=13, API_DISCONNECT=14。 */
+typedef int (*fcl_anw_perform_t)(struct ANativeWindow *window, int op, ...);
+
+static int
+fcl_anw_perform(struct ANativeWindow *window, int op, int arg)
+{
+   fcl_anw_perform_t perform = *(fcl_anw_perform_t *)((char *)window + 0x98);
+   return perform(window, op, arg);
+}
+
+#define FCL_NATIVE_WINDOW_API_CONNECT 13
+#define FCL_NATIVE_WINDOW_API_DISCONNECT 14
+#define FCL_NATIVE_WINDOW_API_EGL 1
 
 static struct dri_image *
 droid_create_image_from_buffer_info(
@@ -57,14 +80,30 @@ droid_create_image_from_buffer_info(
    struct u_gralloc_buffer_basic_info *buf_info,
    struct u_gralloc_buffer_color_info *color_info, void *priv)
 {
-   unsigned error;
+   unsigned error = 0;
 
-   return dri2_from_dma_bufs(
+   struct dri_image *img = dri2_from_dma_bufs(
       dri2_dpy->dri_screen_render_gpu, width, height, buf_info->drm_fourcc,
       buf_info->modifier, buf_info->fds, buf_info->num_planes,
       buf_info->strides, buf_info->offsets, color_info->yuv_color_space,
       color_info->sample_range, color_info->horizontal_siting,
       color_info->vertical_siting, 0, &error, priv);
+
+   if (!img) {
+      _eglLog(_EGL_WARNING,
+              "FCL from_dma_bufs failed: err=0x%x %dx%d fourcc=0x%x "
+              "modifier=0x%llx planes=%d stride0=%d offset0=%d fd0=%d",
+              error, width, height, buf_info->drm_fourcc,
+              (unsigned long long)buf_info->modifier, buf_info->num_planes,
+              buf_info->strides[0], buf_info->offsets[0], buf_info->fds[0]);
+      fprintf(stderr,
+              "[fcl-egl] from_dma_bufs failed: err=0x%x %dx%d fourcc=0x%x "
+              "modifier=0x%llx planes=%d stride0=%d offset0=%d fd0=%d\n",
+              error, width, height, buf_info->drm_fourcc,
+              (unsigned long long)buf_info->modifier, buf_info->num_planes,
+              buf_info->strides[0], buf_info->offsets[0], buf_info->fds[0]);
+   }
+   return img;
 }
 
 static struct dri_image *
@@ -336,26 +375,6 @@ droid_create_surface(_EGLDisplay *disp, EGLint type, _EGLConfig *conf,
                  dri2_conf->base.NativeVisualID);
       }
 
-      /* FCL: probe the window BEFORE mutating it (setUsage/setBuffersGeometry
-       * can reconfigure the BufferQueue).  A first dequeue tells us whether the
-       * app's SurfaceTexture/Surface producer is usable; retry a bit because
-       * the view may attach slightly after the JVM starts. */
-      {
-         struct ANativeWindowBuffer *nb = NULL;
-         int probe_fence = -1;
-         int tries = 0, perr = -1;
-
-         for (; tries < 50; tries++) {
-            perr = ANativeWindow_dequeueBuffer(window, &nb, &probe_fence);
-            if (perr == 0) {
-               ANativeWindow_cancelBuffer(window, nb, probe_fence);
-               break;
-            }
-            usleep(100000);
-         }
-         fprintf(stderr, "[fcl-egl] wait window: tries=%d err=%d\n", tries, perr);
-      }
-
       ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_WIDTH,
                           &dri2_surf->base.Width);
       ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_HEIGHT,
@@ -391,14 +410,18 @@ droid_create_surface(_EGLDisplay *disp, EGLint type, _EGLConfig *conf,
       if (dri2_surf->base.ActiveRenderBuffer == EGL_SINGLE_BUFFER)
          dri2_surf->gralloc_usage |= dri2_dpy->front_rendering_usage;
 
-      /* FCL: do NOT touch the ANativeWindow usage/geometry.  Changing usage on
-       * a SurfaceTexture-backed Surface reconfigures the BufferQueue and can
-       * leave its producer disconnected (dequeue -> ENODEV). */
-      fprintf(stderr,
-              "[fcl-egl] create_window_surface: win=%p fmt=0x%x min_undeq=%d "
-              "size=%dx%d (usage not set)\n",
+      /* FCL: 厂商 libEGL 在这里会做 native_window_set_usage +
+       * native_window_api_connect(NATIVE_WINDOW_API_EGL)。Mesa 的 droid 路径
+       * 两者都不做，结果 ANativeWindow_dequeueBuffer() 永远 -ENODEV，
+       * EGLSurface 拿不到任何 buffer（黑屏 + 每帧 GL_INVALID_OPERATION）。 */
+      int usage_err = ANativeWindow_setUsage(window, dri2_surf->gralloc_usage);
+      int conn_err = fcl_anw_perform(window, FCL_NATIVE_WINDOW_API_CONNECT,
+                                     FCL_NATIVE_WINDOW_API_EGL);
+      _eglLog(_EGL_WARNING,
+              "FCL create_window_surface: win=%p fmt=0x%x min_undeq=%d "
+              "size=%dx%d setUsage=%d api_connect=%d",
               window, format, min_undequeued_buffers, dri2_surf->base.Width,
-              dri2_surf->base.Height);
+              dri2_surf->base.Height, usage_err, conn_err);
    }
 
    config = dri2_get_dri_config(dri2_conf, type, dri2_surf->base.GLColorspace);
@@ -450,6 +473,8 @@ droid_destroy_surface(_EGLDisplay *disp, _EGLSurface *surf)
       if (dri2_surf->buffer)
          droid_window_cancel_buffer(dri2_surf);
 
+      fcl_anw_perform(dri2_surf->window, FCL_NATIVE_WINDOW_API_DISCONNECT,
+                      FCL_NATIVE_WINDOW_API_EGL);
       ANativeWindow_release(dri2_surf->window);
    }
 
@@ -1280,6 +1305,13 @@ dri2_initialize_android(_EGLDisplay *disp)
          if (dri2_load_driver(disp) && dri2_create_screen(disp)) {
             fprintf(stderr, "[fcl-egl] KGSL screen OK\n");
             dri2_dpy->kgsl_no_drm = true;
+            /* KGSL has no DRI3/multibuffers, so dri_init_screen() leaves
+             * dmabuf_import/has_dmabuf false, and importing the window's
+             * gralloc dmabuf fails with __DRI_IMAGE_ERROR_BAD_PARAMETER.
+             * freedreno's KGSL backend does implement dmabuf import/export. */
+            dri2_dpy->dri_screen_render_gpu->dmabuf_import = true;
+            dri2_dpy->dri_screen_render_gpu->has_dmabuf = true;
+            fprintf(stderr, "[fcl-egl] dmabuf import forced on\n");
             device_opened = EGL_TRUE;
          } else {
             fprintf(stderr, "[fcl-egl] KGSL screen FAILED swrast=%d not_kms=%d\n",
