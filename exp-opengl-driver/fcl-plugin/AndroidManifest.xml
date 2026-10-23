@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.a730.mesa.osmesa"
+    android:versionCode="1"
+    android:versionName="25.0.7">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
+
+    <application
+        android:label="Mesa Freedreno A730 (GL 4.6)"
+        android:hasCode="false"
+        android:extractNativeLibs="true"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="Mesa Freedreno A730">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- FCL renderer plugin v1 declaration -->
+        <meta-data android:name="fclPlugin" android:value="true" />
+        <meta-data android:name="des" android:value="Mesa 25.0.7 freedreno, OpenGL 4.6 core, Adreno 730 / KGSL" />
+        <meta-data android:name="renderer" android:value="Freedreno-A730:libOSMesa_8.so:libEGL.so" />
+        <meta-data android:name="boatEnv" android:value="" />
+        <meta-data android:name="pojavEnv" android:value="POJAV_RENDERER=gallium_freedreno:LIB_MESA_NAME=libOSMesa_8.so:MESA_GL_VERSION_OVERRIDE=4.6:MESA_GLSL_VERSION_OVERRIDE=460:allow_higher_compat_version=true:force_glsl_extensions_warn=true" />
+        <meta-data android:name="minMCVer" android:value="" />
+        <meta-data android:name="maxMCVer" android:value="" />
+    </application>
+</manifest>

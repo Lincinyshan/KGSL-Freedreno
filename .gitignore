@@ -1,0 +1,20 @@
+# ---- 大件 / 可再生成（不入库） ----
+/exp-opengl-driver/gl_workdir/
+/exp-opengl-driver/.research/
+/exp-opengl-driver/.git-seed/
+/exp-opengl-driver/release-*.bak-*/
+/exp-opengl-driver/*.log
+/exp-opengl-driver/fcl-plugin/out/
+# SDK jar 与签名中间产物：见 fcl-plugin/build-plugin.sh（android-29.jar 需自备）
+/exp-opengl-driver/fcl-plugin/*.jar
+/exp-opengl-driver/fcl-plugin/*.idsig
+/exp-opengl-driver/fcl-plugin/debug.keystore
+
+# ---- 独立仓库 / 机器相关 ----
+/vulkan-driver/
+/android-ndk-r30
+/android-sdk
+
+# ---- 杂项 ----
+*.swp
+.DS_Store
