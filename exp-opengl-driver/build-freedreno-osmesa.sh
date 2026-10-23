@@ -360,6 +360,44 @@ osmesa_create_freedreno_screen(void)
     s = s.replace(old, new, 1)
     open(p, 'w').write(s)
     print('patched osmesa_target.c: kgsl error reporting')
+
+# 9) ir3 shader disk cache: build_id_find_nhdr_for_addr() returns NULL when the
+#    binary has no .note.gnu.build-id; build_id_data(NULL) is NULL+16 and
+#    _mesa_sha1_format() then dereferences it.  Release builds have NDEBUG
+#    asserts compiled out, so crash instead of assert - skip the cache instead.
+p = 'src/freedreno/ir3/ir3_disk_cache.c'
+s = open(p).read()
+if 'No usable build-id note' not in s:
+    old = '''   const struct build_id_note *note =
+      build_id_find_nhdr_for_addr(ir3_disk_cache_init);
+   assert(note && build_id_length(note) == 20); /* sha1 */
+'''
+    new = '''   const struct build_id_note *note =
+      build_id_find_nhdr_for_addr(ir3_disk_cache_init);
+   if (!note || build_id_length(note) != 20) {
+      /* No usable build-id note: skip the cache rather than crash. */
+      return;
+   }
+   assert(note && build_id_length(note) == 20); /* sha1 */
+'''
+    if old not in s:
+        sys.exit('ir3_disk_cache_init() build-id block not found, patch failed')
+    s = s.replace(old, new, 1)
+    open(p, 'w').write(s)
+    print('patched ir3_disk_cache.c: tolerate missing build-id note')
+
+# 10) Emit a GNU build-id in libOSMesa: Mesa expects one (ir3 disk cache, crash
+#     symbolization).  ld.lld only adds it when asked.
+p = 'src/gallium/targets/osmesa/meson.build'
+s = open(p).read()
+if '--build-id' not in s:
+    old = 'osmesa_link_args = []'
+    new = "osmesa_link_args = ['-Wl,--build-id=sha1']"
+    if old not in s:
+        sys.exit('osmesa_link_args initialization not found, patch failed')
+    s = s.replace(old, new, 1)
+    open(p, 'w').write(s)
+    print('patched osmesa meson: link with GNU build-id')
 PYEOF
 
 # KGSL Gallium backend sources (adapted to 25.0.7; see patches/kgsl/README.md).
