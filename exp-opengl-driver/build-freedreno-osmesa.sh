@@ -243,6 +243,123 @@ if 'kgsl_device_new(int fd);' not in s:
                   '#endif', 1)
     open(p, 'w').write(s)
     print('patched freedreno_device.c: kgsl_device_new declaration')
+
+# 6) KGSL: Android's /dev/kgsl-3d0 does not implement DRM_IOCTL_VERSION, so
+#    drmGetVersion() fails with ENOTTY even for a valid kgsl fd.  Probe KGSL
+#    directly instead (same approach as turnip's tu_enumerate_devices()).
+p = 'src/freedreno/drm/freedreno_device.c'
+s = open(p).read()
+if 'ENOTTY' not in s:
+    old = '''   version = drmGetVersion(fd);
+   if (!version) {
+      ERROR_MSG("cannot get version: %s", strerror(errno));
+      return NULL;
+   }'''
+    new = '''   version = drmGetVersion(fd);
+   if (!version) {
+#if HAVE_FREEDRENO_KGSL
+      /* Android's KGSL does not implement DRM_IOCTL_VERSION (ENOTTY), so
+       * drmGetVersion() fails even for a perfectly valid /dev/kgsl-3d0 fd.
+       * Probe it directly, the same way turnip's tu_enumerate_devices() does.
+       */
+      dev = kgsl_device_new(fd);
+      if (dev)
+         goto out;
+#endif
+      ERROR_MSG("cannot get version: %s", strerror(errno));
+      return NULL;
+   }'''
+    if old not in s:
+        sys.exit('fd_device_new() version detection block not found, patch failed')
+    s = s.replace(old, new, 1)
+    open(p, 'w').write(s)
+    print('patched freedreno_device.c: kgsl probe when drmGetVersion fails')
+
+# 7) OSMesa creates the freedreno screen without a loader-provided
+#    pipe_screen_config (config == NULL); freedreno_screen.c assumes it is
+#    non-NULL and would crash on config->options.
+p = 'src/gallium/drivers/freedreno/freedreno_screen.c'
+s = open(p).read()
+if 'no loader-provided driconf' not in s:
+    old = '''   /* parse driconf configuration now for device specific overrides: */
+   driParseConfigFiles(config->options, config->options_info, 0, "msm",
+                       NULL, fd_dev_name(screen->dev_id), NULL, 0, NULL, 0);
+
+   screen->driconf.conservative_lrz =
+         !driQueryOptionb(config->options, "disable_conservative_lrz");
+   screen->driconf.enable_throttling =
+         !driQueryOptionb(config->options, "disable_throttling");
+   screen->driconf.dual_color_blend_by_location =
+         driQueryOptionb(config->options, "dual_color_blend_by_location");
+'''
+    new = '''   /* parse driconf configuration now for device specific overrides: */
+   if (config) {
+      driParseConfigFiles(config->options, config->options_info, 0, "msm",
+                          NULL, fd_dev_name(screen->dev_id), NULL, 0, NULL, 0);
+
+      screen->driconf.conservative_lrz =
+            !driQueryOptionb(config->options, "disable_conservative_lrz");
+      screen->driconf.enable_throttling =
+            !driQueryOptionb(config->options, "disable_throttling");
+      screen->driconf.dual_color_blend_by_location =
+            driQueryOptionb(config->options, "dual_color_blend_by_location");
+   } else {
+      /* no loader-provided driconf (standalone OSMesa target): defaults */
+      screen->driconf.conservative_lrz = true;
+      screen->driconf.enable_throttling = true;
+      screen->driconf.dual_color_blend_by_location = false;
+   }
+'''
+    if old not in s:
+        sys.exit('freedreno_screen.c driconf block not found, patch failed')
+    s = s.replace(old, new, 1)
+    open(p, 'w').write(s)
+    print('patched freedreno_screen.c: tolerate NULL pipe_screen_config')
+
+# 8) Report KGSL screen-creation failures on stderr (FCL captures it) and stop
+#    leaking the /dev/kgsl-3d0 fd.
+p = 'src/gallium/targets/osmesa/osmesa_target.c'
+s = open(p).read()
+if 'osmesa/freedreno: open(' not in s:
+    s = s.replace('#include <fcntl.h>',
+                  '#include <errno.h>\n#include <fcntl.h>\n#include <stdio.h>', 1)
+    old = '''static struct pipe_screen *
+osmesa_create_freedreno_screen(void)
+{
+   int fd = open("/dev/kgsl-3d0", O_RDWR | O_CLOEXEC);
+   if (fd < 0)
+      return NULL;
+   return fd_screen_create(fd, NULL, NULL);
+}'''
+    new = '''static struct pipe_screen *
+osmesa_create_freedreno_screen(void)
+{
+   struct pipe_screen *screen;
+   int fd = open("/dev/kgsl-3d0", O_RDWR | O_CLOEXEC);
+
+   if (fd < 0) {
+      fprintf(stderr, "osmesa/freedreno: open(/dev/kgsl-3d0) failed: %s\\n",
+              strerror(errno));
+      return NULL;
+   }
+
+   screen = fd_screen_create(fd, NULL, NULL);
+   if (!screen) {
+      fprintf(stderr, "osmesa/freedreno: fd_screen_create() failed "
+                      "(see MESA logs)\\n");
+      close(fd);
+      return NULL;
+   }
+
+   /* fd_screen_create() dups() the fd internally, ours is not needed. */
+   close(fd);
+   return screen;
+}'''
+    if old not in s:
+        sys.exit('osmesa_create_freedreno_screen() body not found, patch failed')
+    s = s.replace(old, new, 1)
+    open(p, 'w').write(s)
+    print('patched osmesa_target.c: kgsl error reporting')
 PYEOF
 
 # KGSL Gallium backend sources (adapted to 25.0.7; see patches/kgsl/README.md).
