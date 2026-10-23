@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 #include <GLES3/gl3.h>
 
 typedef void *OSMesaContext;
@@ -20,6 +21,87 @@ extern void OSMesaPixelStore(GLint pname, GLint value);
 
 #define W 256
 #define H 256
+
+static GLuint compile_shader(GLenum type, const char *src, const char *what);
+
+static double now_ms(void) {
+   struct timespec ts;
+   clock_gettime(CLOCK_MONOTONIC, &ts);
+   return ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
+}
+
+/* 粗略模拟游戏的每帧开销：
+ *   - draws 个 draw call（测 CPU 提交开销）
+ *   - glFinish（测同步）
+ *   - readback=1 时把整帧读回用户内存（模拟 OSMesa flush_front 的拷贝）
+ */
+static int bench_mode(int w, int h, int frames, int draws, int readback) {
+   printf("[bench] %dx%d frames=%d draws/frame=%d readback=%d\n", w, h, frames, draws, readback);
+   fflush(stdout);
+
+   unsigned char *buf = calloc((size_t)w * h, 4);
+   OSMesaContext ctx = OSMesaCreateContext(GL_RGBA, NULL);
+   if (!ctx || !OSMesaMakeCurrent(ctx, buf, GL_UNSIGNED_BYTE, w, h)) {
+      printf("[bench] context failed\n");
+      return 1;
+   }
+   OSMesaPixelStore(OSMESA_ROW_LENGTH, w);
+   OSMesaPixelStore(OSMESA_Y_UP, 0);
+   glViewport(0, 0, w, h);
+
+   const char *vs =
+      "#version 150\n"
+      "uniform vec2 off;\n"
+      "void main() {\n"
+      "   vec2 p = vec2(gl_VertexID == 1 ? 3.0 : -1.0,\n"
+      "                 gl_VertexID == 2 ? 3.0 : -1.0);\n"
+      "   gl_Position = vec4(p * 0.02 + off, 0.0, 1.0);\n"
+      "}\n";
+   const char *fs =
+      "#version 150\n"
+      "uniform vec2 off;\n"
+      "out vec4 c;\n"
+      "void main() { c = vec4(fract(off.x + 0.5), fract(off.y + 0.5), 0.5, 1.0); }\n";
+
+   GLuint vsh = compile_shader(GL_VERTEX_SHADER, vs, "bench-vs");
+   GLuint fsh = vsh ? compile_shader(GL_FRAGMENT_SHADER, fs, "bench-fs") : 0;
+   if (!vsh || !fsh) return 2;
+
+   GLuint prog = glCreateProgram();
+   glAttachShader(prog, vsh);
+   glAttachShader(prog, fsh);
+   glLinkProgram(prog);
+   GLint ok = 0;
+   glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+   if (!ok) { printf("[bench] link failed\n"); return 3; }
+   glUseProgram(prog);
+   GLint loc = glGetUniformLocation(prog, "off");
+
+   /* 预热 */
+   for (int i = 0; i < 3; i++) { glClear(GL_COLOR_BUFFER_BIT); glFinish(); }
+
+   double t0 = now_ms();
+   for (int f = 0; f < frames; f++) {
+      glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      for (int i = 0; i < draws; i++) {
+         float x = (float)((i * 37) % 100) / 50.0f - 1.0f;
+         float y = (float)((i * 53) % 100) / 50.0f - 1.0f;
+         glUniform2f(loc, x, y);
+         glDrawArrays(GL_TRIANGLES, 0, 3);
+      }
+      glFinish();
+      if (readback)
+         glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+   }
+   double t1 = now_ms();
+   double per = (t1 - t0) / frames;
+   printf("[bench] %.2f ms/frame  = %.1f fps\n", per, frames * 1000.0 / (t1 - t0));
+   fflush(stdout);
+   OSMesaDestroyContext(ctx);
+   free(buf);
+   return 0;
+}
 
 static void step(const char *s) { printf("[probe] %s\n", s); fflush(stdout); }
 
@@ -45,7 +127,17 @@ static GLuint compile_shader(GLenum type, const char *src, const char *what) {
    return sh;
 }
 
+static int env_int(const char *name, int def) {
+   const char *v = getenv(name);
+   return v ? atoi(v) : def;
+}
+
 int main(void) {
+   if (getenv("PROBE_BENCH"))
+      return bench_mode(env_int("PROBE_W", 2880), env_int("PROBE_H", 1800),
+                        env_int("PROBE_FRAMES", 30), env_int("PROBE_DRAWS", 1000),
+                        env_int("PROBE_READBACK", 1));
+
    unsigned char *buf = calloc(W * H, 4);
    if (!buf) return 1;
 
