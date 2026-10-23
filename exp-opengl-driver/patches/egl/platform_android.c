@@ -336,56 +336,10 @@ droid_create_surface(_EGLDisplay *disp, EGLint type, _EGLConfig *conf,
                  dri2_conf->base.NativeVisualID);
       }
 
-      ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_WIDTH,
-                          &dri2_surf->base.Width);
-      ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_HEIGHT,
-                          &dri2_surf->base.Height);
-
-      /* FCL: some app-created surfaces (SurfaceView) have no default buffer
-       * size set, which leaves the EGL surface at 0x0 and makes
-       * dequeueBuffer() fail.  Fall back to the real window size.
-       * These entry points are not in Mesa's android_stub, resolve them at
-       * runtime from the system libnativewindow. */
-      if (dri2_surf->base.Width <= 0 || dri2_surf->base.Height <= 0) {
-         void *nw = dlopen("libnativewindow.so", RTLD_LAZY | RTLD_LOCAL);
-         int32_t (*get_w)(struct ANativeWindow *) = NULL;
-         int32_t (*get_h)(struct ANativeWindow *) = NULL;
-         int32_t (*set_geom)(struct ANativeWindow *, int32_t, int32_t, int32_t) = NULL;
-         if (nw) {
-            get_w = (void *)dlsym(nw, "ANativeWindow_getWidth");
-            get_h = (void *)dlsym(nw, "ANativeWindow_getHeight");
-            set_geom = (void *)dlsym(nw, "ANativeWindow_setBuffersGeometry");
-         }
-         int32_t w = get_w ? get_w(window) : 0;
-         int32_t h = get_h ? get_h(window) : 0;
-         fprintf(stderr, "[fcl-egl] default size 0x0, window really %dx%d (set_geom=%p)\n",
-                 w, h, (void *)set_geom);
-         if (w > 0 && h > 0) {
-            if (set_geom)
-               set_geom(window, w, h, format);
-            ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_WIDTH,
-                                &dri2_surf->base.Width);
-            ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_HEIGHT,
-                                &dri2_surf->base.Height);
-            if (dri2_surf->base.Width <= 0)
-               dri2_surf->base.Width = w;
-            if (dri2_surf->base.Height <= 0)
-               dri2_surf->base.Height = h;
-         }
-      }
-
-      dri2_surf->gralloc_usage =
-         ((strcmp(dri2_dpy->driver_name, "kms_swrast") == 0) ||
-          (strcmp(dri2_dpy->driver_name, "swrast") == 0))
-            ? GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN
-            : GRALLOC_USAGE_HW_RENDER;
-
-      if (dri2_surf->base.ActiveRenderBuffer == EGL_SINGLE_BUFFER)
-         dri2_surf->gralloc_usage |= dri2_dpy->front_rendering_usage;
-
-      /* FCL: the app's window may not be connected yet when the EGL surface is
-       * created (SurfaceView attaches slightly later); dequeue would then fail
-       * with ENODEV.  Wait (up to ~5s) until a buffer can be acquired. */
+      /* FCL: probe the window BEFORE mutating it (setUsage/setBuffersGeometry
+       * can reconfigure the BufferQueue).  A first dequeue tells us whether the
+       * app's SurfaceTexture/Surface producer is usable; retry a bit because
+       * the view may attach slightly after the JVM starts. */
       {
          struct ANativeWindowBuffer *nb = NULL;
          int probe_fence = -1;
@@ -402,16 +356,49 @@ droid_create_surface(_EGLDisplay *disp, EGLint type, _EGLConfig *conf,
          fprintf(stderr, "[fcl-egl] wait window: tries=%d err=%d\n", tries, perr);
       }
 
-      int usage_err = ANativeWindow_setUsage(window, dri2_surf->gralloc_usage);
+      ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_WIDTH,
+                          &dri2_surf->base.Width);
+      ANativeWindow_query(window, ANATIVEWINDOW_QUERY_DEFAULT_HEIGHT,
+                          &dri2_surf->base.Height);
+
+      /* FCL: some app-created surfaces have no default buffer size set, which
+       * leaves the EGL surface at 0x0.  Fall back to the real window size.
+       * These entry points are not in Mesa's android_stub, resolve them at
+       * runtime from the system libnativewindow. */
+      if (dri2_surf->base.Width <= 0 || dri2_surf->base.Height <= 0) {
+         void *nw = dlopen("libnativewindow.so", RTLD_LAZY | RTLD_LOCAL);
+         int32_t (*get_w)(struct ANativeWindow *) = NULL;
+         int32_t (*get_h)(struct ANativeWindow *) = NULL;
+         if (nw) {
+            get_w = (void *)dlsym(nw, "ANativeWindow_getWidth");
+            get_h = (void *)dlsym(nw, "ANativeWindow_getHeight");
+         }
+         int32_t w = get_w ? get_w(window) : 0;
+         int32_t h = get_h ? get_h(window) : 0;
+         fprintf(stderr, "[fcl-egl] default size 0x0, window really %dx%d\n", w, h);
+         if (dri2_surf->base.Width <= 0)
+            dri2_surf->base.Width = w;
+         if (dri2_surf->base.Height <= 0)
+            dri2_surf->base.Height = h;
+      }
+
+      dri2_surf->gralloc_usage =
+         ((strcmp(dri2_dpy->driver_name, "kms_swrast") == 0) ||
+          (strcmp(dri2_dpy->driver_name, "swrast") == 0))
+            ? GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN
+            : GRALLOC_USAGE_HW_RENDER;
+
+      if (dri2_surf->base.ActiveRenderBuffer == EGL_SINGLE_BUFFER)
+         dri2_surf->gralloc_usage |= dri2_dpy->front_rendering_usage;
+
+      /* FCL: do NOT touch the ANativeWindow usage/geometry.  Changing usage on
+       * a SurfaceTexture-backed Surface reconfigures the BufferQueue and can
+       * leave its producer disconnected (dequeue -> ENODEV). */
       fprintf(stderr,
               "[fcl-egl] create_window_surface: win=%p fmt=0x%x min_undeq=%d "
-              "size=%dx%d usage=0x%x setUsage=%d\n",
+              "size=%dx%d (usage not set)\n",
               window, format, min_undequeued_buffers, dri2_surf->base.Width,
-              dri2_surf->base.Height, dri2_surf->gralloc_usage, usage_err);
-      if (usage_err) {
-         _eglError(EGL_BAD_NATIVE_WINDOW, "droid_create_surface");
-         goto cleanup_surface;
-      }
+              dri2_surf->base.Height);
    }
 
    config = dri2_get_dri_config(dri2_conf, type, dri2_surf->base.GLColorspace);
