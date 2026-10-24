@@ -733,6 +733,132 @@ int ubwc_selftest_present_sz(void *egl, void *getproc, int win_w, int win_h,
    return failures ? 1 : 0;
 }
 
+
+/* T11：反馈用例 —— 先渲染进 UBWC RT，再把同一个 RT 当纹理用 shader 采样到另一个 RT。
+ * 这是 MC 物品/实体渲染的典型模式。 */
+int ubwc_selftest_feedback_sz(void *egl, void *getproc, int S);
+int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode);
+
+int ubwc_selftest_feedback(void *egl, void *getproc)
+{
+   ubwc_selftest_feedback_mode(egl, getproc, 512, 0);
+   ubwc_selftest_feedback_mode(egl, getproc, 512, 1);
+   ubwc_selftest_feedback_mode(egl, getproc, 512, 2);
+   ubwc_selftest_feedback_mode(egl, getproc, 64, 0);
+   return 0;
+}
+
+int ubwc_selftest_feedback_sz(void *egl, void *getproc, int S)
+{
+   return ubwc_selftest_feedback_mode(egl, getproc, S, 0);
+}
+
+int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
+{
+   typedef void *(*PFN_gp)(const char *);
+   PFN_gp gp = (PFN_gp)getproc;
+#define GF(type, var, name) type var = (void *)(dlsym(egl, name) ? dlsym(egl, name) : gp(name)); if (!var) { LOGI("UBWC-FB: missing %s", name); return -1; }
+   GF(PFN_glCreateShader, CreateShader, "glCreateShader");
+   GF(PFN_glShaderSource, ShaderSource, "glShaderSource");
+   GF(PFN_glCompileShader, CompileShader, "glCompileShader");
+   GF(PFN_glGetShaderiv, GetShaderiv, "glGetShaderiv");
+   GF(PFN_glCreateProgram, CreateProgram, "glCreateProgram");
+   GF(PFN_glAttachShader, AttachShader, "glAttachShader");
+   GF(PFN_glLinkProgram, LinkProgram, "glLinkProgram");
+   GF(PFN_glGetProgramiv, GetProgramiv, "glGetProgramiv");
+   GF(PFN_glUseProgram, UseProgram, "glUseProgram");
+   GF(PFN_glGetUniformLocation, GetUniformLocation, "glGetUniformLocation");
+   GF(PFN_glUniform1i, Uniform1i, "glUniform1i");
+   GF(PFN_glGenVertexArrays, GenVertexArrays, "glGenVertexArrays");
+   GF(PFN_glBindVertexArray, BindVertexArray, "glBindVertexArray");
+   GF(PFN_glGenBuffers, GenBuffers, "glGenBuffers");
+   GF(PFN_glBindBuffer, BindBuffer, "glBindBuffer");
+   GF(PFN_glBufferData, BufferData, "glBufferData");
+   GF(PFN_glVertexAttribPointer, VertexAttribPointer, "glVertexAttribPointer");
+   GF(PFN_glEnableVertexAttribArray, EnableVertexAttribArray, "glEnableVertexAttribArray");
+   GF(PFN_glDrawArrays, DrawArrays, "glDrawArrays");
+#undef GF
+
+   const char *vs_src = "#version 330 core\nlayout(location=0) in vec2 p;\nout vec2 uv;\nvoid main(){uv=p*0.5+0.5;gl_Position=vec4(p,0,1);}\n";
+   const char *fs_src = "#version 330 core\nuniform sampler2D t;\nin vec2 uv;\nout vec4 c;\nvoid main(){c=texture(t,uv);}\n";
+   GLuint vs = CreateShader(GL_VERTEX_SHADER), fs = CreateShader(GL_FRAGMENT_SHADER);
+   ShaderSource(vs, 1, &vs_src, NULL); CompileShader(vs);
+   ShaderSource(fs, 1, &fs_src, NULL); CompileShader(fs);
+   GLint ok = 0;
+   GetShaderiv(vs, GL_COMPILE_STATUS, &ok);
+   GetShaderiv(fs, GL_COMPILE_STATUS, &ok);
+   if (!ok) { LOGI("UBWC-FB: shader compile failed"); return -1; }
+   GLuint prog = CreateProgram();
+   AttachShader(prog, vs); AttachShader(prog, fs); LinkProgram(prog);
+   GLint linked = 0; GetProgramiv(prog, GL_LINK_STATUS, &linked);
+   if (!linked) { LOGI("UBWC-FB: link failed"); return -1; }
+   UseProgram(prog);
+   Uniform1i(GetUniformLocation(prog, "t"), 0);
+
+   GLuint vao = 0, vbo = 0;
+   GenVertexArrays(1, &vao); BindVertexArray(vao);
+   const float quad[8] = {-1, -1, 1, -1, -1, 1, 1, 1};
+   GenBuffers(1, &vbo); BindBuffer(GL_ARRAY_BUFFER, vbo);
+   BufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+   VertexAttribPointer(0, 2, GL_FLOAT, 0, 8, NULL);
+   EnableVertexAttribArray(0);
+
+   GLuint src = 0, srcFb = 0, dst = 0, dstFb = 0;
+   src = make_rt((int *)&srcFb);
+   dst = make_rt((int *)&dstFb);
+
+   unsigned char px[4];
+   int failures = 0, first = -1;
+   for (int iter = 0; iter < 40; iter++) {
+      /* 渲染进 UBWC RT：清红 + 中间绿块 */
+      gl.BindFramebuffer(GL_FRAMEBUFFER, srcFb);
+      gl.Enable(GL_SCISSOR_TEST);
+      gl.Scissor(0, 0, S, S);
+      gl.ClearColor(1, 0, 0, 1);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.Scissor(S / 4, S / 4, S / 2, S / 2);
+      gl.ClearColor(0, 1, 0, 1);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.Disable(GL_SCISSOR_TEST);
+      gl.Finish();
+      if (mode >= 1)
+         gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+      if (mode >= 2)
+         gl.Finish();
+
+      /* 把同一个 RT 当纹理采样到另一个 RT（反馈/别名） */
+      gl.BindFramebuffer(GL_FRAMEBUFFER, dstFb);
+      gl.ClearColor(0, 0, 0, 1);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.BindTexture(GL_TEXTURE_2D, src);   /* src 同时是上面渲染的 RT */
+      BindVertexArray(vao);
+      DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      read_px((int)dstFb, S / 2, S / 2, px);
+      int okc = eq4(px, 0, 255, 0, 255);
+      if (first < 0)
+         LOGI("UBWC-FB(%d): center got %u,%u,%u want 0,255,0", px[0], px[1], px[2], S);
+      read_px((int)dstFb, 8, 8, px);
+      if (first < 0)
+         LOGI("UBWC-FB(%d): edge   got %u,%u,%u want 255,0,0", px[0], px[1], px[2], S);
+      okc = okc && eq4(px, 255, 0, 0, 255);
+      if (!okc) {
+         failures++;
+         if (first < 0) { first = iter; LOGI("UBWC-FB: iter %d center/edge mismatch", iter); }
+      }
+   }
+   gl.DeleteFramebuffers(1, &srcFb);
+   gl.DeleteFramebuffers(1, &dstFb);
+   gl.DeleteTextures(1, &src);
+   gl.DeleteTextures(1, &dst);
+   BindVertexArray(0);
+   LOGI("UBWC-FB(%d,mode=%d): RESULT %s (failures=%d/40 first=%d)", S, mode, failures ? "FAIL" : "PASS",
+        failures, first);
+   return failures ? 1 : 0;
+}
+
 int ubwc_selftest(void *egl, void *getproc)
 {
    if (resolve(egl, getproc)) {
@@ -859,6 +985,8 @@ int ubwc_selftest(void *egl, void *getproc)
       ubwc_selftest_mrt(egl, getproc);
       extern int ubwc_selftest_sample(void *, void *);
       ubwc_selftest_sample(egl, getproc);
+      extern int ubwc_selftest_feedback(void *, void *);
+      ubwc_selftest_feedback(egl, getproc);
    }
    return failures ? 1 : 0;
 }
