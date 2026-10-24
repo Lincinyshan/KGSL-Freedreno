@@ -10,6 +10,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -56,6 +57,11 @@ static void *find_proc(void *handle, PFN_getproc getproc, const char *name) {
 }
 
 static void run_test(ANativeWindow *win) {
+   /* 与 MC 的环境一致：freedreno 自身声明的桌面 GL 版本低于 4.6，
+    * MC 是通过 MESA_GL_VERSION_OVERRIDE=4.6 才拿到 4.6 core 的。 */
+   setenv("MESA_GL_VERSION_OVERRIDE", "4.6", 0);
+   setenv("MESA_GLSL_VERSION_OVERRIDE", "460", 0);
+   setenv("allow_higher_compat_version", "true", 0);
    int32_t w = 0, h = 0, fmt = 0, minund = -1;
    void *nwlib = dlopen("libnativewindow.so", RTLD_LAZY);
    PFN_query q = nwlib ? (PFN_query)dlsym(nwlib, "ANativeWindow_query") : NULL;
@@ -131,8 +137,17 @@ static void run_test(ANativeWindow *win) {
    EGLint major = 0, minor = 0;
    if (!p_init(dpy, &major, &minor)) { LOGI("eglInitialize failed 0x%x", p_err()); return; }
    LOGI("EGL %d.%d apis=%s", major, minor, p_qs(dpy, EGL_CLIENT_APIS));
+   /* FCL: 桌面 GL 必须先 bind API，再 chooseConfig，否则拿到的 config 不带 EGL_OPENGL_BIT */
+   if (p_bind) p_bind(EGL_OPENGL_API); /* FCL: 先绑 API 再选 config */
 
    const EGLint cfg_attr[] = {
+      EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT,
+      EGL_RENDERABLE_TYPE, 0x8 /*EGL_OPENGL_BIT*/,
+      EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+      EGL_DEPTH_SIZE, 24,
+      EGL_NONE
+   };
+   const EGLint cfg_attr_es[] = {
       EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT,
       EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
       EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
@@ -140,7 +155,11 @@ static void run_test(ANativeWindow *win) {
       EGL_NONE
    };
    EGLConfig cfg = NULL; EGLint n = 0;
-   if (!p_choose(dpy, cfg_attr, &cfg, 1, &n) || n < 1) { LOGI("chooseConfig failed 0x%x", p_err()); return; }
+   if (!p_choose(dpy, cfg_attr, &cfg, 1, &n) || n < 1) {
+      LOGI("chooseConfig(EGL_OPENGL_BIT) failed 0x%x, retry ES2", p_err());
+      if (p_bind) p_bind(EGL_OPENGL_ES_API);
+      if (!p_choose(dpy, cfg_attr_es, &cfg, 1, &n) || n < 1) { LOGI("chooseConfig failed 0x%x", p_err()); return; }
+   }
    EGLint d = 0; p_cfgattr(dpy, cfg, EGL_DEPTH_SIZE, &d);
    LOGI("config ok depth=%d", d);
 
@@ -158,7 +177,7 @@ static void run_test(ANativeWindow *win) {
       EGL_NONE
    };
    EGLContext ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, ctx46);
-   LOGI("context(4.6 core)=%p", (void *)ctx);
+   LOGI("context(4.6 core)=%p err=0x%x", (void *)ctx, ctx ? 0 : p_err());
    if (!ctx)
       ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, NULL);
    LOGI("context(desktop GL)=%p err=0x%x", (void *)ctx, ctx ? 0 : p_err());
@@ -200,6 +219,12 @@ static void run_test(ANativeWindow *win) {
       LOGI("UBWC selftest begin");
       int rc = ubwc_selftest(egl, (void *)getproc);
       LOGI("UBWC selftest rc=%d", rc);
+      extern int ubwc_selftest_present(void *, void *, int, int, void *(*)(void *, void *), void *, void *);
+      extern int ubwc_selftest_present_sz(void *, void *, int, int, void *(*)(void *, void *), void *, void *, int);
+      ubwc_selftest_present_sz(egl, (void *)getproc, 2880, 1800,
+                               (void *(*)(void *, void *))p_swap, (void *)dpy, (void *)surf, 1024);
+      ubwc_selftest_present_sz(egl, (void *)getproc, 2880, 1800,
+                               (void *(*)(void *, void *))p_swap, (void *)dpy, (void *)surf, 64);
    }
 
    if (viewport) viewport(0, 0, 2880, 1800);

@@ -452,6 +452,287 @@ int ubwc_selftest_cube(void *egl, void *getproc)
    return failures ? 1 : 0;
 }
 
+
+/* T8：MRT（两个 UBWC 颜色附件）+ 双 RT ping-pong 拷贝，模拟 MC 的帧间交替。 */
+#define GL_COLOR_ATTACHMENT1 0x8CE1
+int ubwc_selftest_mrt(void *egl, void *getproc)
+{
+   (void)egl; (void)getproc;
+   const int S = 512;
+   GLuint t0 = 0, t1 = 0, fb = 0, rt = 0, rtFb = 0;
+   gl.GenTextures(1, &t0);
+   gl.GenTextures(1, &t1);
+   gl.GenFramebuffers(1, &fb);
+
+   GLuint texs[2] = {t0, t1};
+   for (int i = 0; i < 2; i++) {
+      gl.BindTexture(GL_TEXTURE_2D, texs[i]);
+      gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, S, S, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   }
+   gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+   gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t0, 0);
+   gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, t1, 0);
+   GLenum st = gl.CheckFramebufferStatus(GL_FRAMEBUFFER);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   LOGI("UBWC-MRT: fbo status=0x%x (两个 UBWC 颜色附件)", st);
+   if (st != GL_FRAMEBUFFER_COMPLETE) return 1;
+
+   rt = make_rt((int *)&rtFb);
+   int failures = 0, first = -1;
+   unsigned char px[4];
+
+   for (int iter = 0; iter < 80; iter++) {
+      /* 两个附件分别 clear 成不同颜色 */
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+      gl.ClearColor((iter & 1) ? 1.0f : 0.0f, 0.0f, 0.0f, 1.0f);
+      gl.Clear(GL_COLOR_BUFFER_BIT); /* MRT: 两个附件都会被 clear 成同色 */
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      /* 从 attachment0 读 */
+      read_px((int)fb, S / 2, S / 2, px);
+      int want = (iter & 1) ? 255 : 0;
+      if (!(near(px[0], want) && near(px[1], 0) && near(px[2], 0))) {
+         failures++;
+         if (first < 0) { first = iter; LOGI("UBWC-MRT: att0 iter %d got %u,%u,%u want %d,0,0", iter, px[0], px[1], px[2], want); }
+      }
+
+      /* ping-pong：fb -> rt -> fb */
+      gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+      gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, rtFb);
+      gl.BlitFramebuffer(0, 0, S, S, 0, 0, S, S, 0x4000, GL_NEAREST);
+      gl.Finish();
+      gl.BindFramebuffer(GL_READ_FRAMEBUFFER, rtFb);
+      gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, fb);
+      gl.BlitFramebuffer(0, 0, S, S, 0, 0, S, S, 0x4000, GL_NEAREST);
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      read_px((int)fb, S / 2, S / 2, px);
+      if (!eq4(px, want, 0, 0, 255)) {
+         failures++;
+         if (first < 0) { first = iter; LOGI("UBWC-MRT: pingpong iter %d got %u,%u,%u want %d,0,0", iter, px[0], px[1], px[2], want); }
+      }
+   }
+   gl.DeleteFramebuffers(1, &fb);
+   gl.DeleteTextures(1, &t0);
+   gl.DeleteTextures(1, &t1);
+   gl.DeleteTextures(1, &rt);
+   gl.DeleteFramebuffers(1, &rtFb);
+   LOGI("UBWC-MRT: RESULT %s (failures=%d/160 first=%d)", failures ? "FAIL" : "PASS",
+        failures, first);
+   return failures ? 1 : 0;
+}
+
+
+/* T9：用着色器“采样”一个 UBWC 纹理 —— MC 的物品图集就是这样用的，
+ * 而粒子图集宽度小于 UBWC 阈值(128)不压缩，正好对应“物品花、粒子不花”。 */
+typedef GLuint (*PFN_glCreateShader)(GLenum);
+typedef void (*PFN_glShaderSource)(GLuint, GLsizei, const char *const *, const GLint *);
+typedef void (*PFN_glCompileShader)(GLuint);
+typedef void (*PFN_glGetShaderiv)(GLuint, GLenum, GLint *);
+typedef void (*PFN_glGetShaderInfoLog)(GLuint, GLsizei, GLsizei *, char *);
+typedef GLuint (*PFN_glCreateProgram)(void);
+typedef void (*PFN_glAttachShader)(GLuint, GLuint);
+typedef void (*PFN_glLinkProgram)(GLuint);
+typedef void (*PFN_glGetProgramiv)(GLuint, GLenum, GLint *);
+typedef void (*PFN_glUseProgram)(GLuint);
+typedef GLint (*PFN_glGetUniformLocation)(GLuint, const char *);
+typedef void (*PFN_glUniform1i)(GLint, GLint);
+typedef void (*PFN_glGenVertexArrays)(GLsizei, GLuint *);
+typedef void (*PFN_glBindVertexArray)(GLuint);
+typedef void (*PFN_glGenBuffers)(GLsizei, GLuint *);
+typedef void (*PFN_glBindBuffer)(GLenum, GLuint);
+typedef void (*PFN_glBufferData)(GLenum, long, const void *, GLenum);
+typedef void (*PFN_glVertexAttribPointer)(GLuint, GLint, GLenum, unsigned char, GLsizei, const void *);
+typedef void (*PFN_glEnableVertexAttribArray)(GLuint);
+typedef void (*PFN_glDrawArrays)(GLenum, GLint, GLsizei);
+
+#define GL_FRAGMENT_SHADER 0x8B30
+#define GL_VERTEX_SHADER 0x8B31
+#define GL_COMPILE_STATUS 0x8B81
+#define GL_LINK_STATUS 0x8B82
+#define GL_TEXTURE0 0x84C0
+#define GL_ARRAY_BUFFER 0x8892
+#define GL_STATIC_DRAW 0x88E4
+#define GL_FLOAT 0x1406
+#define GL_TRIANGLE_STRIP 0x0005
+#define GL_COLOR_ATTACHMENT0_ 0x8CE0
+
+int ubwc_selftest_sample(void *egl, void *getproc)
+{
+   typedef void *(*PFN_gp)(const char *);
+   PFN_gp gp = (PFN_gp)getproc;
+#define G(type, var, name) type var = (void *)(dlsym(egl, name) ? dlsym(egl, name) : gp(name)); if (!var) { LOGI("UBWC-SAMPLE: missing %s", name); return -1; }
+   G(PFN_glCreateShader, CreateShader, "glCreateShader");
+   G(PFN_glShaderSource, ShaderSource, "glShaderSource");
+   G(PFN_glCompileShader, CompileShader, "glCompileShader");
+   G(PFN_glGetShaderiv, GetShaderiv, "glGetShaderiv");
+   G(PFN_glGetShaderInfoLog, GetShaderInfoLog, "glGetShaderInfoLog");
+   G(PFN_glCreateProgram, CreateProgram, "glCreateProgram");
+   G(PFN_glAttachShader, AttachShader, "glAttachShader");
+   G(PFN_glLinkProgram, LinkProgram, "glLinkProgram");
+   G(PFN_glGetProgramiv, GetProgramiv, "glGetProgramiv");
+   G(PFN_glUseProgram, UseProgram, "glUseProgram");
+   G(PFN_glGetUniformLocation, GetUniformLocation, "glGetUniformLocation");
+   G(PFN_glUniform1i, Uniform1i, "glUniform1i");
+   G(PFN_glGenVertexArrays, GenVertexArrays, "glGenVertexArrays");
+   G(PFN_glBindVertexArray, BindVertexArray, "glBindVertexArray");
+   G(PFN_glGenBuffers, GenBuffers, "glGenBuffers");
+   G(PFN_glBindBuffer, BindBuffer, "glBindBuffer");
+   G(PFN_glBufferData, BufferData, "glBufferData");
+   G(PFN_glVertexAttribPointer, VertexAttribPointer, "glVertexAttribPointer");
+   G(PFN_glEnableVertexAttribArray, EnableVertexAttribArray, "glEnableVertexAttribArray");
+   G(PFN_glDrawArrays, DrawArrays, "glDrawArrays");
+#undef G
+
+   const char *vs_src =
+      "#version 330 core\n"
+      "layout(location=0) in vec2 pos;\n"
+      "out vec2 uv;\n"
+      "void main(){ uv = pos * 0.5 + 0.5; gl_Position = vec4(pos, 0.0, 1.0); }\n";
+   const char *fs_src =
+      "#version 330 core\n"
+      "uniform sampler2D tex;\n"
+      "in vec2 uv;\n"
+      "out vec4 color;\n"
+      "void main(){ color = texture(tex, uv); }\n";
+
+   GLuint vs = CreateShader(GL_VERTEX_SHADER), fs = CreateShader(GL_FRAGMENT_SHADER);
+   ShaderSource(vs, 1, &vs_src, NULL); CompileShader(vs);
+   ShaderSource(fs, 1, &fs_src, NULL); CompileShader(fs);
+   GLint okv = 0, okf = 0;
+   GetShaderiv(vs, GL_COMPILE_STATUS, &okv);
+   GetShaderiv(fs, GL_COMPILE_STATUS, &okf);
+   if (!okv || !okf) {
+      char log[512] = {0};
+      GetShaderInfoLog(okv ? fs : vs, sizeof(log) - 1, NULL, log);
+      LOGI("UBWC-SAMPLE: shader compile failed vs=%d fs=%d: %s", okv, okf, log);
+      return -1;
+   }
+   GLuint prog = CreateProgram();
+   AttachShader(prog, vs); AttachShader(prog, fs); LinkProgram(prog);
+   GLint linked = 0; GetProgramiv(prog, GL_LINK_STATUS, &linked);
+   if (!linked) { LOGI("UBWC-SAMPLE: link failed"); return -1; }
+   UseProgram(prog);
+   Uniform1i(GetUniformLocation(prog, "tex"), 0);
+
+   GLuint vao = 0, vbo = 0;
+   GenVertexArrays(1, &vao); BindVertexArray(vao);
+   const float quad[8] = {-1, -1, 1, -1, -1, 1, 1, 1};
+   GenBuffers(1, &vbo); BindBuffer(GL_ARRAY_BUFFER, vbo);
+   BufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+   VertexAttribPointer(0, 2, GL_FLOAT, 0, 8, NULL);
+   EnableVertexAttribArray(0);
+
+   /* 源纹理：512x512（>= UBWC 阈值），用 glTexSubImage2D 上色 */
+   const int S = 512;
+   static unsigned char magenta[S * S * 4];
+   for (int i = 0; i < S * S; i++) {
+      magenta[i * 4 + 0] = 255; magenta[i * 4 + 1] = 0;
+      magenta[i * 4 + 2] = 255; magenta[i * 4 + 3] = 255;
+   }
+   GLuint src = 0;
+   gl.GenTextures(1, &src);
+   gl.BindTexture(GL_TEXTURE_2D, src);
+   gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, S, S, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+   gl.TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, S, S, GL_RGBA, GL_UNSIGNED_BYTE, magenta);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.BindTexture(GL_TEXTURE_2D, 0);
+
+   GLuint rt = 0, rtFb = 0;
+   rt = make_rt((int *)&rtFb);
+
+   unsigned char px[4];
+   int failures = 0, first = -1;
+   for (int iter = 0; iter < 40; iter++) {
+      gl.BindFramebuffer(GL_FRAMEBUFFER, rtFb);
+      gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.BindTexture(GL_TEXTURE_2D, src);
+      BindVertexArray(vao);
+      DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      read_px((int)rtFb, S / 2, S / 2, px);
+      if (!eq4(px, 255, 0, 255, 255)) {
+         failures++;
+         if (first < 0) { first = iter; LOGI("UBWC-SAMPLE: iter %d got %u,%u,%u want 255,0,255", iter, px[0], px[1], px[2]); }
+      }
+   }
+   gl.DeleteFramebuffers(1, &rtFb);
+   gl.DeleteTextures(1, &rt);
+   gl.DeleteTextures(1, &src);
+   BindVertexArray(0);
+   LOGI("UBWC-SAMPLE: RESULT %s (failures=%d/40 first=%d)", failures ? "FAIL" : "PASS",
+        failures, first);
+   return failures ? 1 : 0;
+}
+
+
+/* T10：UBWC RT -> 窗口（默认帧缓冲）blit + swap，循环 100 次。
+ * 这是 MC 每帧真正做的事（我们其它用例都只在 FBO 之间搬运）。 */
+int ubwc_selftest_present_sz(void *egl, void *getproc, int win_w, int win_h,
+                             void *(*swap)(void *, void *), void *dpy, void *surf, int S);
+
+int ubwc_selftest_present(void *egl, void *getproc, int win_w, int win_h,
+                          void *(*swap)(void *, void *), void *dpy, void *surf)
+{
+   return ubwc_selftest_present_sz(egl, getproc, win_w, win_h, swap, dpy, surf, 1024);
+}
+
+int ubwc_selftest_present_sz(void *egl, void *getproc, int win_w, int win_h,
+                             void *(*swap)(void *, void *), void *dpy, void *surf, int S)
+{
+   (void)getproc;
+   GLuint tex = 0, fb = 0;
+   gl.GenTextures(1, &tex);
+   gl.BindTexture(GL_TEXTURE_2D, tex);
+   gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, S, S, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.GenFramebuffers(1, &fb);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+   gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+   unsigned char px[4];
+   int failures = 0, first = -1;
+   for (int iter = 0; iter < 100; iter++) {
+      float r = (iter & 1) ? 1.0f : 0.0f;
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+      gl.ClearColor(r, 0.0f, 0.0f, 1.0f);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.Finish();
+
+      /* 缩放到窗口尺寸 blit 到默认帧缓冲 */
+      gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+      gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+      gl.BlitFramebuffer(0, 0, S, S, 0, 0, win_w, win_h, 0x4000, GL_NEAREST);
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      /* swap 前从默认帧缓冲读回 */
+      gl.ReadPixels(win_w / 2, win_h / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+      int want = (iter & 1) ? 255 : 0;
+      if (!(near(px[0], want) && near(px[1], 0) && near(px[2], 0))) {
+         failures++;
+         if (first < 0) { first = iter; LOGI("UBWC-PRESENT: iter %d got %u,%u,%u want %d,0,0", iter, px[0], px[1], px[2], want); }
+      }
+      if (swap)
+         swap(dpy, surf);
+   }
+   gl.DeleteTextures(1, &tex);
+   gl.DeleteFramebuffers(1, &fb);
+   LOGI("UBWC-PRESENT(%dx%d): RESULT %s (failures=%d/100 first=%d)", S, S, failures ? "FAIL" : "PASS",
+        failures, first);
+   return failures ? 1 : 0;
+}
+
 int ubwc_selftest(void *egl, void *getproc)
 {
    if (resolve(egl, getproc)) {
@@ -574,6 +855,10 @@ int ubwc_selftest(void *egl, void *getproc)
       ubwc_selftest_mipmap(egl, getproc);
       extern int ubwc_selftest_cube(void *, void *);
       ubwc_selftest_cube(egl, getproc);
+      extern int ubwc_selftest_mrt(void *, void *);
+      ubwc_selftest_mrt(egl, getproc);
+      extern int ubwc_selftest_sample(void *, void *);
+      ubwc_selftest_sample(egl, getproc);
    }
    return failures ? 1 : 0;
 }
