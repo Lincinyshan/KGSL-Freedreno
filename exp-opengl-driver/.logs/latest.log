@@ -1,0 +1,398 @@
+==================== Before Start ====================
+invoke redirectStdio
+invoke setLogPipeReady
+Log pipe ready.
+invoke setFCLNativeWindow
+invoke setEventPipe
+==================== Start Minecraft ====================
+Renderer: Freedreno-EGL
+Device: Xiaomi liuqin 23046RP50C
+Architecture: arm64
+CPU: SM8475
+Android SDK: 35
+Language: zh_CN
+FCL Version Code: 1341
+==================== Mods ====================
+
+==================== Env Map ====================
+Env: PATH=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/bin:/product/bin:/apex/com.android.runtime/bin:/apex/com.android.art/bin:/system_ext/bin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin
+Env: POJAV_NATIVEDIR=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: DALVIK_JAVAVM=-5476376624172294800
+Env: JAVA_HOME=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25
+Env: FCL_NATIVEDIR=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: SDL_EGL_LIBRARY=/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so
+Env: DRIVER_PATH=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: LD_LIBRARY_PATH=/data/user/0/com.tungsten.fcl/app_runtime/jna:/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64:/data/user/0/com.tungsten.fcl/app_runtime_mod:/system/lib64:/vendor/lib64:/vendor/lib64/hw:/system_ext/lib64:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a:/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: DRIVER_GPU=adreno
+Env: FCL_VERSION_CODE=1341
+Env: POJAV_RENDERER=opengles3_desktopgl_freedreno
+Env: SDL_OPENGL_LIBRARY=/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so
+Env: DRIVER_LIB=libvulkan_freedreno.so
+Env: FORCE_VSYNC=false
+Env: MESA_GLSL_VERSION_OVERRIDE=460
+Env: MOD_ANDROID_RUNTIME=/data/user/0/com.tungsten.fcl/app_runtime_mod
+Env: allow_higher_compat_version=true
+Env: VULKAN_DRIVER_SYSTEM=1
+Env: MESA_GL_VERSION_OVERRIDE=4.6
+Env: POJAVEXEC_EGL=libEGL_freedreno.so
+Env: TMPDIR=/data/user/0/com.tungsten.fcl/cache
+Env: LIBGL_ES=3
+Env: DALVIK_APPLICATION=0x39aa
+Env: force_glsl_extensions_warn=true
+Env: LIBGL_DEBUG=verbose
+Env: ALSOFT_DRIVERS=opensl
+Env: HOME=/storage/emulated/0/FCL/log
+==================== DLOPEN ====================
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjli.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjvm.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfreetype.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libverify.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjava.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnio.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_headless.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfontmanager.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjavajpeg.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjava.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfreetype.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libj2pkcs11.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libinstrument.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_xawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libverify.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libj2gss.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/librmi.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libprefs.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsyslookup.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjdwp.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsctp.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmlib_image.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjvm.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjsig.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfontmanager.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsleef.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement_ext.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnio.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement_agent.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libzip.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libdt_socket.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/liblcms.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjsig.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_headless.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjli.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjaas.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjimage.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libextnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjsound.so
+DLOPEN: loading /data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64/libopenal.so
+Working directory: /storage/emulated/0/FCL/.minecraft/versions/26.3
+[fcl-egl] shim loaded (ctor) dir=/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64
+[fcl-egl] ctor: real=0x28dc07b836571f95 getproc=0x78b37a9b68 dlerror=(null)
+DLOPEN: loading /data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so
+==================== Minecraft Arguments ====================
+Java argument: /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/bin/java
+Java argument: -Djava.awt.headless=false
+Java argument: -Dcacio.managed.screensize=2880x1800
+Java argument: -Dcacio.font.fontmanager=sun.awt.X11FontManager
+Java argument: -Dcacio.font.fontscaler=sun.font.FreetypeFontScaler
+Java argument: -Dswing.defaultlaf=javax.swing.plaf.nimbus.NimbusLookAndFeel
+Java argument: -Dawt.toolkit=com.github.caciocavallosilano.cacio.ctc.CTCToolkit
+Java argument: -Djava.awt.graphicsenv=com.github.caciocavallosilano.cacio.ctc.CTCGraphicsEnvironment
+Java argument: -javaagent:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-agent.jar
+Java argument: --add-exports=java.desktop/java.awt=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/java.awt.peer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.image=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.java2d=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/java.awt.dnd.peer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.event=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.datatransfer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.font=ALL-UNNAMED
+Java argument: --add-exports=java.base/sun.security.action=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.util=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/java.awt=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/sun.font=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/sun.java2d=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.net=ALL-UNNAMED
+Java argument: -Xbootclasspath/a:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-agent.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-shared-1.19.1-SNAPSHOT.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-tta-1.19.1-SNAPSHOT.jar
+Java argument: -Xmx2670m
+Java argument: -Xms512m
+Java argument: -Dfile.encoding=UTF-8
+Java argument: -Dstdout.encoding=UTF-8
+Java argument: -Dstderr.encoding=UTF-8
+Java argument: -Djava.rmi.server.useCodebaseOnly=true
+Java argument: -Dcom.sun.jndi.rmi.object.trustURLCodebase=false
+Java argument: -Dcom.sun.jndi.cosnaming.object.trustURLCodebase=false
+Java argument: -Dlog4j2.formatMsgNoLookups=true
+Java argument: -Dlog4j.configurationFile=/storage/emulated/0/FCL/.minecraft/versions/26.3/log4j2.xml
+Java argument: -Dminecraft.client.jar=/storage/emulated/0/FCL/.minecraft/versions/26.3/26.3.jar
+Java argument: -XX:ActiveProcessorCount=8
+Java argument: -Dfml.ignoreInvalidMinecraftCertificates=true
+Java argument: -Dfml.ignorePatchDiscrepancies=true
+Java argument: -Dext.net.resolvPath=/data/user/0/com.tungsten.fcl/app_runtime/java/resolv.conf
+Java argument: -Djava.io.tmpdir=/data/user/0/com.tungsten.fcl/cache/fclauncher
+Java argument: -Dos.name=Linux
+Java argument: -Dos.version=Android-15
+Java argument: -Dorg.lwjgl.opengl.libname=/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so
+Java argument: -Dorg.lwjgl.egl.libname=/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so
+Java argument: -Dorg.lwjgl.openal.libname=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64/libopenal.so
+Java argument: -Dorg.lwjgl.freetype.libname=/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a/libfreetype.so
+Java argument: -Dorg.lwjgl.librarypath=/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a
+Java argument: -Dorg.lwjgl.system.allocator=system
+Java argument: -Dfml.earlyprogresswindow=false
+Java argument: -Dglfwstub.initEgl=false
+Java argument: -Dloader.disable_forked_guis=true
+Java argument: -Duser.home=/storage/emulated/0/FCL/.minecraft
+Java argument: -Duser.language=zh
+Java argument: -Duser.country=CN
+Java argument: -Duser.timezone=Asia/Shanghai
+Java argument: -Dorg.lwjgl.vulkan.libname=libvulkan.so
+Java argument: -Dorg.lwjgl.spvc.libname=spirv-cross-c-shared
+Java argument: -Dsodium.checks.issue2561=false
+Java argument: -Djdk.lang.Process.launchMechanism=FORK
+Java argument: -Dcpu.name=SM8475
+Java argument: -Djna.boot.library.path=/data/user/0/com.tungsten.fcl/app_runtime/jna/5.17.0
+Java argument: -javaagent:/data/user/0/com.tungsten.fcl/files/plugins/MioLibPatcher.jar
+Java argument: -XX:StackShadowPages=32
+Java argument: --enable-native-access=ALL-UNNAMED
+Java argument: --add-exports
+Java argument: java.base/jdk.internal.misc=ALL-UNNAMED
+Java argument: -Djava.library.path=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib:/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/jli:/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server:/data/user/0/com.tungsten.fcl/app_runtime/jna:/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64:/data/user/0/com.tungsten.fcl/app_runtime_mod:/system/lib64:/vendor/lib64:/vendor/lib64/hw:/system_ext/lib64:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a:/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Java argument: -Djna.tmpdir=/data/user/0/com.tungsten.fcl/cache/fclauncher/jna
+Java argument: -Dorg.lwjgl.system.SharedLibraryExtractPath=/data/user/0/com.tungsten.fcl/cache/fclauncher/lwjgl
+Java argument: -Dio.netty.native.workdir=/data/user/0/com.tungsten.fcl/cache/fclauncher/netty
+Java argument: -Dminecraft.launcher.brand=Fold Craft Launcher
+Java argument: -Dminecraft.launcher.version=1.3.4.1
+Java argument: -cp
+Java argument: /data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-3.4.1-merged-modules.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-spng.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-stb.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-freetype.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-nanovg.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-shaderc.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-spvc.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-vulkan.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-openal.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-tinyfd.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-vma.jar:/storage/emulated/0/FCL/.minecraft/libraries/at/yawk/lz4/lz4-java/1.10.1/lz4-java-1.10.1.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/azure/azure-json/1.4.0/azure-json-1.4.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/github/oshi/oshi-core/6.9.0/oshi-core-6.9.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/code/gson/gson/2.14.0/gson-2.14.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/microsoft/azure/msal4j/1.24.1/msal4j-1.24.1.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/authlib/10.0.77/authlib-10.0.77.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/brigadier/1.3.11/brigadier-1.3.11.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/datafixerupper/10.0.21/datafixerupper-10.0.21.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/jtracy/1.14.38/jtracy-1.14.38.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/logging/1.7.12/logging-1.7.12.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/text2speech/1.19.12/text2speech-1.19.12.jar:/storage/emulated/0/FCL/.minecraft/libraries/commons-codec/commons-codec/1.22.0/commons-codec-1.22.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-buffer/4.2.16.Final/netty-buffer-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-base/4.2.16.Final/netty-codec-base-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-compression/4.2.16.Final/netty-codec-compression-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-http/4.2.16.Final/netty-codec-http-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-common/4.2.16.Final/netty-common-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-handler/4.2.16.Final/netty-handler-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-resolver/4.2.16.Final/netty-resolver-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-classes-epoll/4.2.16.Final/netty-transport-classes-epoll-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-classes-kqueue/4.2.16.Final/netty-transport-classes-kqueue-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-native-unix-common/4.2.16.Final/netty-transport-native-unix-common-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport/4.2.16.Final/netty-transport-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/java/dev/jna/jna-platform/5.17.0/jna-platform-5.17.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-api/2.26.0/log4j-api-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-core/2.26.0/log4j-core-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-slf4j2-impl/2.26.0/log4j-slf4j2-impl-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/joml/joml/1.10.9/joml-1.10.9.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/data/user/0/com.tungsten.fcl/files/plugins/MioLaunchWrapper.jar:/storage/emulated/0/FCL/.minecraft/versions/26.3/26.3.jar
+Java argument: --add-exports
+Java argument: net.minecraft.client.main/net.minecraft.client.main=ALL-UNNAMED
+MainClass: mio.Wrapper
+MainClass: net.minecraft.client.main.Main
+Minecraft argument: --username
+Minecraft argument: ymxdxy_lcys
+Minecraft argument: --version
+Minecraft argument: 26.3
+Minecraft argument: --gameDir
+Minecraft argument: /storage/emulated/0/FCL/.minecraft/versions/26.3
+Minecraft argument: --assetsDir
+Minecraft argument: /storage/emulated/0/FCL/.minecraft/assets
+Minecraft argument: --assetIndex
+Minecraft argument: 34
+Minecraft argument: --uuid
+Minecraft argument: 6870aa30e90540178fe572ee2697e8ed
+Minecraft argument: --accessToken
+Minecraft argument: ***
+Minecraft argument: --clientId
+Minecraft argument: ${clientid}
+Minecraft argument: --xuid
+Minecraft argument: ${auth_xuid}
+Minecraft argument: --versionType
+Minecraft argument: Fold Craft Launcher
+Minecraft argument: --width
+Minecraft argument: 2880
+Minecraft argument: --height
+Minecraft argument: 1800
+Successfully initialized exit hook, stub: 0x79c3f7e640SDL_Hook: Successfully initialized SDL hooks, stubs: InitSubSystem=0x79c3f7d200 GetWindowFromEvent=0x79c3f7e880 GetWindowFromID=0x79c3f7e130 LoadFunction=0x79c3f7c7e0 CreateWindow=0x79c3f7c2d0 CreateWindowWithProps=0x79c3f7b3a0 LoadObject=0x79c3f7cfc0 UnloadObject=0x79c3f7b430 DestroyWindow=0x79c3f7c900
+Hook success
+Done processing args
+Found JLI lib
+Calling JLI_Launch
+WARNING: Unknown module: net.minecraft.client.main specified to --add-exports
+WARNING: package sun.security.action not in java.base
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.github.caciocavallosilano.cacio.agent.CTCJavaAgent
+WARNING: Please consider reporting this to the maintainers of class com.github.caciocavallosilano.cacio.agent.CTCJavaAgent
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[MioLibPatcher/INFO]: MioPatcher is running!
+[MioLibPatcher/INFO]: Patch target class: org/lwjgl/system/Library
+Registered forkAndExec
+Installing LWJGL dlopen() hook
+EGLBridge: LWJGL-side Vulkan loader requested the Vulkan handle
+OSMDroid: loading vulkan regularly...
+OSMDroid: loaded vulkan, ptr=0x5ced9960c4d6bb19
+[MioLibPatcher/INFO]: Patch target class: oshi/hardware/platform/linux/LinuxCentralProcessor
+[MioLibPatcher/INFO]: Patch target class: oshi/hardware/CentralProcessor$ProcessorIdentifier
+[14:41:54] [main/WARN]: Did not find udev library in operating system. Some features may not work.
+[14:41:54] [Datafixer Bootstrap #0/INFO]: 307 Datafixer optimizations took 858 milliseconds
+[14:41:55] [main/WARN]: File not found or not readable: /proc/stat
+[14:41:55] [main/WARN]: File not found or not readable: /etc/os-release
+[14:41:55] [main/WARN]: File not found or not readable: /etc/lsb-release
+[14:41:55] [main/WARN]: File not found or not readable: /proc/version
+[14:42:01] [Render thread/INFO]: Environment: Environment[discoveryUrl=https://discovery.minecraftservices.com/minecraft/client, name=PROD]
+[14:42:01] [Render thread/INFO]: Setting user: ymxdxy_lcys
+[14:42:01] [Render thread/INFO]: Backend library: LWJGL version 3.4.1-snapshot+SNAPSHOT
+SDL dlsym proxy for SDL_InitSubSystem
+[14:42:01] [Render thread/INFO]: SDL [SYSTEM]: App name: Minecraft
+[14:42:01] [Render thread/INFO]: SDL [SYSTEM]: App version: 26.3
+[14:42:01] [Render thread/INFO]: SDL [SYSTEM]: App ID: com.mojang.minecraft
+[14:42:01] [Render thread/INFO]: SDL [SYSTEM]: SDL revision: 
+SDL dlsym proxy for SDL_CreateWindow
+SDL dlsym proxy for SDL_CreateWindowWithProperties
+SDL dlsym proxy for SDL_GetWindowFromID
+SDL dlsym proxy for SDL_DestroyWindow
+[fcl-egl] KGSL fd=207 driver=freedreno
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 215
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 215
+ATTENTION: default value of option force_glsl_extensions_warn overridden by environment.
+ATTENTION: default value of option allow_higher_compat_version overridden by environment.
+[fcl-egl] fd_screen_create(fd=215 config=0x78a56f4838)
+[fcl-egl] driver screen ok, init configs
+[fcl-egl] dri_init_screen ok
+[fcl-egl] versions compat=46 core=46 es1=11 es2=32 glsl=460
+[fcl-egl] KGSL screen OK
+[fcl-egl] dmabuf import forced on
+[fcl-egl] api_mask=0x1f valid_gl=1 ClientAPIs=0x4d
+[fcl-egl] default size 0x0, window really 2880x1800
+[fcl-egl] st_visual: depthBits=16 stencilBits=0 zs_fmt=142 mask=0x13
+[14:42:01] [Render thread/INFO]: SDL [APPLICATION]: pixel format wanted SDL_PIXELFORMAT_RGBA8888 (1), got SDL_PIXELFORMAT_RGBA8888 (1)
+[fcl-egl] st_visual: depthBits=16 stencilBits=0 zs_fmt=142 mask=0x13
+[kgsl] import fd=294 iova=0x4006b00000 size=20738048 (end=0x4007ec7000)
+[fcl-egl] fb validate 0x0 num_statts=2: [statt 1 -> 0x79b4169310] [statt 4 -> 0x79b4168ff0]
+SDL_Hook: reusing primary window 0x7ae40a90f0
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glEnable(GL_PROGRAM_POINT_SIZE)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: OpenGL debug message: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)'
+[14:42:01] [Render thread/INFO]: Failed to determine maximum texture size by probing, trying GL_MAX_TEXTURE_SIZE = 16384
+[14:42:01] [Render thread/INFO]: Using graphics backend OpenGL, using drivers: OpenGL ES 3.2 Mesa 25.0.7
+[14:42:01] [Render thread/INFO]: Using graphics device: Adreno (TM) 730 (freedreno)
+[14:42:01] [Render thread/INFO]: Using graphics device extensions: GL_KHR_debug, GL_EXT_texture_filter_anisotropic
+SDL_Hook: reusing primary window 0x7ae40a90f0
+[14:42:01] [Render thread/INFO]: Created window using SDL video driver: android
+[14:42:01] [Render thread/ERROR]: Couldn't leave fullscreen: That operation is not supported
+[14:42:01] [Render thread/WARN]: Failed to set window icon: That operation is not supported
+SDL dlsym proxy for SDL_GetWindowFromEvent
+[MioLibPatcher/INFO]: Patch target class: org/lwjgl/openal/ALC10
+[14:42:04] [Render thread/INFO]: OpenGL debug message: id=3, source=SHADER COMPILER, type=ERROR, severity=HIGH, message='0:1(10): error: GLSL 3.30 is not supported. Supported versions are: 1.00 ES, 3.00 ES, 3.10 ES, and 3.20 ES'
+[14:42:04] [Render thread/ERROR]: Couldn't compile vertex shader for pipeline (minecraft:core/gui): 0:1(10): error: GLSL 3.30 is not supported. Supported versions are: 1.00 ES, 3.00 ES, 3.10 ES, and 3.20 ES
+[14:42:05] [Render thread/WARN]: File not found or not readable: /etc/os-release
+[14:42:05] [Render thread/WARN]: File not found or not readable: /etc/lsb-release
+[14:42:05] [Render thread/WARN]: File not found or not readable: /proc/version
+---- Minecraft Crash Report ----
+// Why is it breaking :(
+
+Time: 2026-10-24 14:42:05
+Description: Initializing game
+
+java.lang.IllegalStateException: Failed to find or load pipeline minecraft:pipeline/gui
+	at com.mojang.blaze3d.systems.RenderSystem.getCompiledPipeline(RenderSystem.java:137)
+	at net.minecraft.client.renderer.GameRenderer.preloadUiShader(GameRenderer.java:280)
+	at net.minecraft.client.Minecraft.loadCriticalShaders(Minecraft.java:889)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:735)
+	at net.minecraft.client.main.Main.main(Main.java:278)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at mio.Wrapper.main(Wrapper.java:21)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at com.mojang.blaze3d.systems.RenderSystem.getCompiledPipeline(RenderSystem.java:137)
+	at net.minecraft.client.renderer.GameRenderer.preloadUiShader(GameRenderer.java:280)
+	at net.minecraft.client.Minecraft.loadCriticalShaders(Minecraft.java:889)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:735)
+
+-- Initialization --
+Details:
+	Modules: 
+Stacktrace:
+	at net.minecraft.client.main.Main.main(Main.java:278)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at mio.Wrapper.main(Wrapper.java:21)
+
+-- System Details --
+Details:
+	Minecraft Version: 26.3
+	Minecraft Version ID: 26.3
+	Operating System: Linux (aarch64) version Android-15
+	Java Version: 25.0.5-internal, N/A
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode), Oracle Corporation
+	Memory: 301053008 bytes (287 MiB) / 536870912 bytes (512 MiB) up to 2799697920 bytes (2670 MiB)
+	Memory (heap): init: 512MiB, used: 220MiB, committed: 512MiB, max: 2670MiB
+	Memory (non-heap): init: 007MiB, used: 138MiB, committed: 141MiB, max: 000MiB
+	CPUs: 8
+	Processor Vendor: ARM
+	Processor Name: SM8475
+	Identifier: 0x41 Family 8 Model 0xd48 Stepping r0p3
+	Microarchitecture: unknown
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 8
+	Number of logical CPUs: 8
+	Graphics card #0 name: unknown
+	Graphics card #0 vendor: unknown
+	Graphics card #0 VRAM (MiB): 0.00
+	Graphics card #0 deviceId: unknown
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 18045.51
+	Virtual memory used (MiB): 13747.58
+	Swap memory total (MiB): 12288.00
+	Swap memory used (MiB): 5317.06
+	Space in storage for jna.tmpdir (MiB): available: 64073.20, total: 230363.98
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 64073.20, total: 230363.98
+	Space in storage for io.netty.native.workdir (MiB): available: 64073.20, total: 230363.98
+	Space in storage for java.io.tmpdir (MiB): available: 64073.20, total: 230363.98
+	Space in storage for workdir (MiB): available: 64073.20, total: 230363.98
+	Operating System Version: Toybox Unknown unknown (unknown)
+	Process Elevated: false
+	Process Loads: Uptime: 0s, user: 40s (3960000.00%), kernel: 8s (752000.00%), total: 47s (4712000.00%)
+	Process Virtual Size (MiB): 22377.41
+	Process Resident Size (MiB): 1234.11
+	JVM Flags: 5 total; -Xbootclasspath/a:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-agent.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-shared-1.19.1-SNAPSHOT.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-tta-1.19.1-SNAPSHOT.jar -Xmx2670m -Xms512m -XX:ActiveProcessorCount=8 -XX:StackShadowPages=32
+	Debug Flags: 0 total; 
+	Launched Version: 26.3
+	Launcher name: Fold Craft Launcher
+	Backend library: LWJGL version 3.4.1-snapshot+SNAPSHOT
+	Window size: <not initialized>
+	Surface Info: <no surface>
+	SDL Platform: Android
+	Graphics Device: Adreno (TM) 730
+	Graphics Backend: OpenGL
+	Graphics Vendor: freedreno
+	Graphics Drivers: OpenGL ES 3.2 Mesa 25.0.7
+	Graphics Device Extensions: GL_KHR_debug, GL_EXT_texture_filter_anisotropic
+	Graphics Device Type: OTHER
+	Graphics Device Features: DeviceFeatures[wireframeFillMode=true, shaderDrawParameters=false, multiDrawDirectInterleaved=false, multiDrawDirectSeparate=true, multiDrawIndirect=false, drawIndirect=false, nonZeroFirstInstance=false, persistentMapping=false]
+	GL debug messages: id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glTexImage2D(target=GL_PROXY_TEXTURE_2D)' x 1
+id=1, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_ENUM in glGetTexLevelParameter[if]v(target=GL_PROXY_TEXTURE_2D)' x 1
+id=3, source=SHADER COMPILER, type=ERROR, severity=HIGH, message='0:1(10): error: GLSL 3.30 is not supported. Supported versions are: 1.00 ES, 3.00 ES, 3.10 ES, and 3.20 ES' x 1
+	Is Modded: Probably not. Client jar signature and brand is untouched
+	Universe: 404
+	Type: Client
+	Locale: zh_CN
+	System encoding: UTF-8
+	File encoding: UTF-8
+	CPU: 8x SM8475
+#@!@# Game crashed! Crash report saved to: #@!@# /storage/emulated/0/FCL/.minecraft/versions/26.3/crash-reports/crash-2026-10-24_14.42.05-client.txt
+
+OpenJDK exited with code : -1

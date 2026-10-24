@@ -10,7 +10,7 @@ Mesa 25.0.7 · freedreno KGSL 后端 · 桌面 GL 4.6 + GLSL 4.60
 
 | 文件 | 说明 | sha256 |
 |---|---|---|
-| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 5 | `1be0b1eb…84d28` |
+| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 6 | `fb8e812f…1450e` |
 | `release-25.0.7-a730-egl/libEGL_mesa_gl.so` | 自编 libEGL（droid 平台 + KGSL 钩子），SONAME `libEGL_mesa_gl.so` | `120ffb90…7cfb` |
 | `release-25.0.7-a730-egl/libgallium_dri.so` | freedreno Gallium 驱动 | `07bd302b…d8ca` |
 
@@ -97,7 +97,14 @@ debug keystore。
    `dri2_load_driver` + `dri2_create_screen`，并让 pipe_loader 回退到
    `"kgsl"` 描述符。
 5. **Android 上开放桌面 GL**：`eglcurrent.h` 去掉 `!DETECT_OS_ANDROID` 限制。
-6. **插件 shim 导出完整 EGL ABI**（`tools/egl_bridge_shim.c`）：除
+6. **强制桌面 GL（MC 26.3 关键）**：26.3 用 SDL 建窗口，SDL 在 Android 上一律
+   请求 **GLES** 上下文，而 26.3 的 OpenGL 后端要求桌面 GL（GLSL 330）。FCL 自己的
+   gl_bridge 只对老版本 MC 调 `eglBindAPI(EGL_OPENGL_API)`，SDL 这条路不会，于是出现
+   `GLSL 3.30 is not supported. Supported versions are: 1.00 ES … 3.20 ES`。
+   shim 里直接接管：`eglBindAPI` 一律绑桌面 GL；`eglCreateContext` 丢掉 ES 的
+   client-version、直接要 4.6（保留调用方给的核心/兼容 profile）；`eglChooseConfig`
+   按 ES 位选不到配置时改用 `EGL_OPENGL_BIT` 重试。
+7. **插件 shim 导出完整 EGL ABI**（`tools/egl_bridge_shim.c`）：除
    `eglGetProcAddress` / `glXGetProcAddress[ARB]` 外，还导出 55 个 EGL 1.0–1.5 核心
    与常用 EXT/KHR 入口（`eglGetDisplay`、`eglCreatePlatformWindowSurface`、
    `eglSwapBuffersWithDamageKHR`、`eglPresentationTimeANDROID` 等），全部转发给

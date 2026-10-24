@@ -168,6 +168,119 @@ glXGetProcAddressARB(const char *name)
    return eglGetProcAddress(name);
 }
 
+/* ---------------- 强制桌面 GL ----------------
+ *
+ * SDL（MC 26.3 用它建窗口）在 Android 上一律请求 GLES 上下文，而 26.3 的
+ * OpenGL 后端要求桌面 GL（GLSL 330）。FCL 自己的 gl_bridge 会对老版本 MC
+ * 调 eglBindAPI(EGL_OPENGL_API)，SDL 这条路不会，所以这里在 shim 里强制：
+ *   - eglBindAPI 一律绑 EGL_OPENGL_API；
+ *   - eglCreateContext 丢掉 ES 的 client-version 属性，直接要 4.6；
+ *   - eglChooseConfig 若按 ES 位选不到配置，则换 EGL_OPENGL_BIT 重试。
+ */
+#define EGL_BIT_OPENGL_ 0x0008
+#define EGL_ATTR_RENDERABLE_TYPE_ 0x3040
+#define EGL_ATTR_CONTEXT_MAJOR_ 0x3098
+#define EGL_ATTR_CONTEXT_MINOR_ 0x30FB
+#define EGL_ATTR_PROFILE_MASK_ 0x30FD
+#define EGL_ATTR_NONE_ 0x3038
+#define EGL_API_OPENGL_ 0x30A2
+
+static int g_force_logged;
+
+static void
+note_force_desktop(const char *what)
+{
+   if (g_force_logged)
+      return;
+   g_force_logged = 1;
+   fprintf(stderr, "[fcl-egl] forcing desktop GL (%s)\n", what);
+   fflush(stderr);
+}
+
+__attribute__((visibility("default"))) EGLBoolean
+eglChooseConfig(EGLDisplay d, const EGLint *attr, EGLConfig *cfgs, EGLint n,
+                EGLint *num)
+{
+   typedef EGLBoolean (*fn_t)(EGLDisplay, const EGLint *, EGLConfig *, EGLint, EGLint *);
+   static fn_t fn;
+   if (!fn)
+      fn = (fn_t)real_sym("eglChooseConfig");
+   if (!fn)
+      return EGL_FALSE;
+
+   EGLBoolean ok = fn(d, attr, cfgs, n, num);
+   if ((ok && num && *num > 0) || !attr)
+      return ok;
+
+   /* 把 EGL_RENDERABLE_TYPE 换成桌面 GL 位重试 */
+   EGLint tmp[64];
+   int i = 0, patched = 0;
+   for (const EGLint *p = attr; p[0] != EGL_ATTR_NONE_ && i < 62; p += 2) {
+      tmp[i++] = p[0];
+      if (p[0] == EGL_ATTR_RENDERABLE_TYPE_) {
+         tmp[i++] = EGL_BIT_OPENGL_;
+         patched = 1;
+      } else {
+         tmp[i++] = p[1];
+      }
+   }
+   tmp[i++] = EGL_ATTR_NONE_;
+   if (!patched)
+      return ok;
+   note_force_desktop("eglChooseConfig");
+   return fn(d, tmp, cfgs, n, num);
+}
+
+__attribute__((visibility("default"))) EGLBoolean
+eglBindAPI(EGLenum api)
+{
+   typedef EGLBoolean (*fn_t)(EGLenum);
+   static fn_t fn;
+   (void)api;
+   if (!fn)
+      fn = (fn_t)real_sym("eglBindAPI");
+   if (!fn)
+      return EGL_FALSE;
+   note_force_desktop("eglBindAPI");
+   return fn(EGL_API_OPENGL_);
+}
+
+__attribute__((visibility("default"))) EGLContext
+eglCreateContext(EGLDisplay d, EGLConfig c, EGLContext share,
+                 const EGLint *attr)
+{
+   typedef EGLContext (*fn_t)(EGLDisplay, EGLConfig, EGLContext, const EGLint *);
+   static fn_t fn;
+   if (!fn)
+      fn = (fn_t)real_sym("eglCreateContext");
+   if (!fn)
+      return EGL_NO_CONTEXT;
+
+   EGLint profile = -1;
+   for (const EGLint *p = attr; p && p[0] != EGL_ATTR_NONE_; p += 2) {
+      if (p[0] == EGL_ATTR_PROFILE_MASK_)
+         profile = p[1];
+   }
+
+   EGLint out[10];
+   int n = 0;
+   out[n++] = EGL_ATTR_CONTEXT_MAJOR_;
+   out[n++] = 4;
+   out[n++] = EGL_ATTR_CONTEXT_MINOR_;
+   out[n++] = 6;
+   if (profile >= 0) {
+      out[n++] = EGL_ATTR_PROFILE_MASK_;
+      out[n++] = profile;
+   }
+   out[n++] = EGL_ATTR_NONE_;
+
+   note_force_desktop("eglCreateContext 4.6");
+   EGLContext ctx = fn(d, c, share, out);
+   if (ctx == EGL_NO_CONTEXT)
+      ctx = fn(d, c, share, NULL);
+   return ctx;
+}
+
 /* ---------------- EGL 1.0 - 1.5 核心入口 ---------------- */
 
 FWD(EGLDisplay, eglGetDisplay, (EGLNativeDisplayType id), (id))
@@ -175,7 +288,7 @@ FWD(EGLBoolean, eglInitialize, (EGLDisplay d, EGLint *maj, EGLint *min), (d, maj
 FWD(EGLBoolean, eglTerminate, (EGLDisplay d), (d))
 FWD(const char *, eglQueryString, (EGLDisplay d, EGLint name), (d, name))
 FWD(EGLBoolean, eglGetConfigs, (EGLDisplay d, EGLConfig *cfgs, EGLint n, EGLint *num), (d, cfgs, n, num))
-FWD(EGLBoolean, eglChooseConfig, (EGLDisplay d, const EGLint *attr, EGLConfig *cfgs, EGLint n, EGLint *num), (d, attr, cfgs, n, num))
+/* eglChooseConfig 见下方自定义实现（ES 位失败时换桌面 GL 位重试） */
 FWD(EGLBoolean, eglGetConfigAttrib, (EGLDisplay d, EGLConfig c, EGLint a, EGLint *v), (d, c, a, v))
 FWD(EGLint, eglGetError, (void), ())
 FWD(EGLSurface, eglCreateWindowSurface, (EGLDisplay d, EGLConfig c, EGLNativeWindowType w, const EGLint *attr), (d, c, w, attr))
@@ -183,7 +296,7 @@ FWD(EGLSurface, eglCreatePbufferSurface, (EGLDisplay d, EGLConfig c, const EGLin
 FWD(EGLSurface, eglCreatePixmapSurface, (EGLDisplay d, EGLConfig c, EGLNativePixmapType p, const EGLint *attr), (d, c, p, attr))
 FWD(EGLBoolean, eglDestroySurface, (EGLDisplay d, EGLSurface s), (d, s))
 FWD(EGLBoolean, eglQuerySurface, (EGLDisplay d, EGLSurface s, EGLint a, EGLint *v), (d, s, a, v))
-FWD(EGLBoolean, eglBindAPI, (EGLenum api), (api))
+/* eglBindAPI 见下方自定义实现（强制桌面 GL） */
 FWD(EGLenum, eglQueryAPI, (void), ())
 FWD(EGLBoolean, eglWaitClient, (void), ())
 FWD(EGLBoolean, eglReleaseThread, (void), ())
@@ -194,7 +307,7 @@ FWD(EGLBoolean, eglBindTexImage, (EGLDisplay d, EGLSurface s, EGLint buf), (d, s
 FWD(EGLBoolean, eglReleaseTexImage, (EGLDisplay d, EGLSurface s, EGLint buf), (d, s, buf))
 FWD(EGLBoolean, eglSurfaceAttrib, (EGLDisplay d, EGLSurface s, EGLint a, EGLint v), (d, s, a, v))
 FWD(EGLBoolean, eglSwapInterval, (EGLDisplay d, EGLint i), (d, i))
-FWD(EGLContext, eglCreateContext, (EGLDisplay d, EGLConfig c, EGLContext share, const EGLint *attr), (d, c, share, attr))
+/* eglCreateContext 见下方自定义实现（强制桌面 GL 4.6） */
 FWD(EGLBoolean, eglDestroyContext, (EGLDisplay d, EGLContext c), (d, c))
 FWD(EGLBoolean, eglMakeCurrent, (EGLDisplay d, EGLSurface draw, EGLSurface read, EGLContext c), (d, draw, read, c))
 FWD(EGLContext, eglGetCurrentContext, (void), ())
