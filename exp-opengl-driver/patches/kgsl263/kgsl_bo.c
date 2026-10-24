@@ -88,7 +88,11 @@ kgsl_bo_madvise(struct fd_bo *bo, int willneed)
 static int
 kgsl_bo_cpu_prep(struct fd_bo *bo, struct fd_pipe *pipe, uint32_t op)
 {
-    /* only need to handle implicit sync here which is a NOP for KGSL */
+    /* KGSL 没有隐式同步。freedreno 在 CPU 写完 staging/write-combine BO 后
+     * 会调 cpu_prep(FLUSH)，期望数据对 GPU 可见；这里给一个完整内存屏障。 */
+    if (op & FD_BO_PREP_FLUSH)
+        __atomic_thread_fence(__ATOMIC_SEQ_CST);
+
     return 0;
 }
 
@@ -255,6 +259,15 @@ kgsl_bo_new(struct fd_device *dev, uint32_t size, uint32_t flags)
 
     if (flags & FD_BO_GPUREADONLY)
         req.flags |= KGSL_MEMFLAGS_GPUREADONLY;
+
+    /* 对齐 msm 语义：默认 write-combine（msm 用 MSM_BO_WC），
+     * 只有 CACHED_COHERENT 的 BO 才申请 IOCOHERENT。
+     * 不设的话 KGSL 默认 write-back 可缓存，CPU 写会留在缓存里，
+     * GPU（如 UBWC 压缩纹理的 blit 上传）会读到旧数据 —— 时有时无的花屏来源。 */
+    if (flags & FD_BO_CACHED_COHERENT)
+        req.flags |= KGSL_MEMFLAGS_IOCOHERENT;
+    else
+        req.flags |= KGSL_CACHEMODE_WRITECOMBINE << KGSL_CACHEMODE_SHIFT;
 
     ret = kgsl_pipe_safe_ioctl(dev->fd, IOCTL_KGSL_GPUMEM_ALLOC_ID, &req);
 
