@@ -1,6 +1,57 @@
 #include "kgsl_priv.h"
 #include "util/os_mman.h"
 
+#include "util/simple_mtx.h"
+
+/* KGSL 没有内核级隐式同步（不像 msm 的 drm 有 implicit sync）：
+ * 没有 fence 记录的 BO 如果直接释放，GPU 可能还在读写它，导致
+ *   GPU PAGE FAULT（UCHE write translation fault）+ 画面花屏。
+ *
+ * 做法：把这类 BO 挂到 pending 列表，等它“最后一次提交的时间戳”
+ * 完成后（非阻塞探测，timeout=0）再真正释放，不阻塞渲染线程。 */
+#define KGSL_PENDING_MAX 8192
+
+struct kgsl_pending_bo {
+    struct fd_bo *bo;
+    struct fd_device *dev;
+    uint32_t ctx;
+    uint64_t ts;
+};
+
+static struct kgsl_pending_bo g_pending[KGSL_PENDING_MAX];
+static int g_pending_n;
+static simple_mtx_t g_pending_lock = SIMPLE_MTX_INITIALIZER;
+
+static void
+kgsl_pending_drain_locked(void)
+{
+    for (int i = 0; i < g_pending_n; ) {
+        struct kgsl_pending_bo *e = &g_pending[i];
+        if (kgsl_wait_ts(e->dev, e->ctx, e->ts, 0) == 0) {
+            fd_bo_fini_common(e->bo);
+            g_pending[i] = g_pending[--g_pending_n];
+        } else {
+            i++;
+        }
+    }
+}
+
+static bool
+kgsl_pending_add(struct fd_bo *bo, struct fd_device *dev, uint32_t ctx, uint64_t ts)
+{
+    simple_mtx_lock(&g_pending_lock);
+    kgsl_pending_drain_locked();
+    if (g_pending_n >= KGSL_PENDING_MAX) {
+        simple_mtx_unlock(&g_pending_lock);
+        return false;
+    }
+    g_pending[g_pending_n++] = (struct kgsl_pending_bo){
+        .bo = bo, .dev = dev, .ctx = ctx, .ts = ts,
+    };
+    simple_mtx_unlock(&g_pending_lock);
+    return true;
+}
+
 static uint64_t
 kgsl_bo_iova(struct fd_bo *bo)
 {
@@ -58,6 +109,19 @@ kgsl_bo_destroy(struct fd_bo *bo)
     for (uint32_t i = 0; i < bo->nr_fences; i++) {
         struct fd_pipe *pipe = bo->fences[i]->pipe;
         pipe->funcs->wait(pipe, bo->fences[i], ~0);
+    }
+
+    /* 没有 fence 记录的 BO（或 fence 等待没覆盖到的）：挂起，等 GPU 时间戳过。 */
+    if (bo->nr_fences == 0) {
+        struct kgsl_device *kdev = to_kgsl_device(bo->dev);
+        if (kdev->last_submit_ts &&
+            kgsl_pending_add(bo, bo->dev, kdev->last_submit_ctx,
+                             kdev->last_submit_ts))
+            return;
+    } else {
+        simple_mtx_lock(&g_pending_lock);
+        kgsl_pending_drain_locked();
+        simple_mtx_unlock(&g_pending_lock);
     }
 
     fd_bo_fini_common(bo);
@@ -172,16 +236,7 @@ kgsl_bo_from_dmabuf(struct fd_device *dev, int fd)
     kgsl_bo->bo_type = KGSL_BO_IMPORT;
     kgsl_bo->import_fd = fd;
 
-    {
-        static int dbg;
-        if (dbg < 8) {
-            fprintf(stderr,
-                    "[kgsl] import fd=%d iova=0x%llx size=%u (end=0x%llx)\n",
-                    fd, (unsigned long long)kgsl_bo->iova, bo->size,
-                    (unsigned long long)(kgsl_bo->iova + bo->size));
-            dbg++;
-        }
-    }
+    (void)kgsl_bo;
 
     return bo;
 }
@@ -215,17 +270,7 @@ kgsl_bo_new(struct fd_device *dev, uint32_t size, uint32_t flags)
     struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
     kgsl_bo->bo_type = KGSL_BO_NATIVE;
 
-    /* 追踪大 BO 的 GPU 地址范围，便于和 dmesg 里的 PAGE FAULT 对照 */
-    if (size >= 65536) {
-        static int dbg;
-        if (dbg < 24) {
-            fprintf(stderr,
-                    "[kgsl] new size=%u iova=0x%llx end=0x%llx flags=0x%x\n",
-                    size, (unsigned long long)kgsl_bo->iova,
-                    (unsigned long long)(kgsl_bo->iova + bo->size), flags);
-            dbg++;
-        }
-    }
+    (void)kgsl_bo;
 
     return bo;
 }

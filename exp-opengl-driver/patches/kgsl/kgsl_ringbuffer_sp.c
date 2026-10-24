@@ -110,6 +110,9 @@ flush_submit_list(struct list_head *submit_list)
 
     fd_submit->out_fence->kfence = req.timestamp;
 
+    /* 记录最后一次提交，供 kgsl_bo_destroy 延迟释放无 fence 的 BO */
+    kgsl_note_submit(pipe->dev, kgsl_pipe->queue_id, req.timestamp);
+
     if  (fd_submit->out_fence->use_fence_fd) {
         int fd = timestamp_to_fd(pipe, req.timestamp);
         if (fd < 0) {

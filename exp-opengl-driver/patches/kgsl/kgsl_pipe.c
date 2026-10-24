@@ -117,6 +117,21 @@ kgsl_pipe_wait(struct fd_pipe *pipe, const struct fd_fence *fence, uint64_t time
     return wait_timestamp_safe(pipe->dev->fd, kgsl_pipe->queue_id, fence->kfence, timeout);
 }
 
+/* 供 BO 延迟释放使用：timeout_ms == 0 时为非阻塞探测 */
+int
+kgsl_wait_ts(struct fd_device *dev, uint32_t ctx, uint64_t ts, int64_t timeout_ms)
+{
+    return wait_timestamp_safe(dev->fd, ctx, ts, timeout_ms);
+}
+
+void
+kgsl_note_submit(struct fd_device *dev, uint32_t ctx, uint64_t ts)
+{
+    struct kgsl_device *kdev = to_kgsl_device(dev);
+    kdev->last_submit_ts = ts;
+    kdev->last_submit_ctx = ctx;
+}
+
 static void
 kgsl_pipe_destroy(struct fd_pipe *pipe)
 {
