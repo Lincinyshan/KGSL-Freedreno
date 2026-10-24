@@ -745,6 +745,7 @@ int ubwc_selftest_feedback(void *egl, void *getproc)
    ubwc_selftest_feedback_mode(egl, getproc, 512, 1);
    ubwc_selftest_feedback_mode(egl, getproc, 512, 2);
    ubwc_selftest_feedback_mode(egl, getproc, 512, 3);
+   ubwc_selftest_feedback_mode(egl, getproc, 512, 4);
    ubwc_selftest_feedback_mode(egl, getproc, 64, 0);
    return 0;
 }
@@ -811,6 +812,22 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
    unsigned char px[4];
    int failures = 0, first = -1;
    for (int iter = 0; iter < 40; iter++) {
+      if (mode >= 4) {
+         /* 先当普通纹理上传一次（初始化纹理内容/布局），再渲染覆盖 */
+         static unsigned char cyan[512 * 512 * 4];
+         static int init4;
+         if (!init4) {
+            for (int i = 0; i < S * S; i++) {
+               cyan[i * 4 + 0] = 0; cyan[i * 4 + 1] = 255;
+               cyan[i * 4 + 2] = 255; cyan[i * 4 + 3] = 255;
+            }
+            init4 = 1;
+         }
+         gl.BindTexture(GL_TEXTURE_2D, src);
+         gl.TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, S, S, GL_RGBA, GL_UNSIGNED_BYTE, cyan);
+         gl.BindTexture(GL_TEXTURE_2D, 0);
+      }
+
       /* 渲染进 UBWC RT：清红 + 中间绿块 */
       gl.BindFramebuffer(GL_FRAMEBUFFER, srcFb);
       gl.Enable(GL_SCISSOR_TEST);
