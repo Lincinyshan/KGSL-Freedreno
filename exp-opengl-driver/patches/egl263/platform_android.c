@@ -1253,7 +1253,12 @@ dri2_initialize_android(_EGLDisplay *disp)
             char *slash = strrchr(dir, '/');
             if (slash) {
                *slash = '\0';
-               setenv("LIBGL_DRIVERS_PATH", dir, 0);
+               /* 必须覆盖：FCL 会预设 LIBGL_DRIVERS_PATH 指向它自带的 Mesa
+                * 驱动目录，不覆盖就会加载 FCL 那份（没有我们的 KGSL 后端）。 */
+               setenv("LIBGL_DRIVERS_PATH", dir, 1);
+               fprintf(stderr, "[fcl-egl] LIBGL_DRIVERS_PATH=%s\n",
+                       getenv("LIBGL_DRIVERS_PATH"));
+               fflush(stderr);
             }
          }
 

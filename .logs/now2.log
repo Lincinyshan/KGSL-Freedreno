@@ -1,0 +1,318 @@
+==================== Before Start ====================
+invoke redirectStdio
+invoke setLogPipeReady
+Log pipe ready.
+invoke setFCLNativeWindow
+invoke setEventPipe
+==================== Start Minecraft ====================
+Renderer: Freedreno-EGL-26.3
+Device: Xiaomi liuqin 23046RP50C
+Architecture: arm64
+CPU: SM8475
+Android SDK: 35
+Language: zh_CN
+FCL Version Code: 1341
+==================== Mods ====================
+
+==================== Env Map ====================
+Env: PATH=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/bin:/product/bin:/apex/com.android.runtime/bin:/apex/com.android.art/bin:/system_ext/bin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin
+Env: POJAV_NATIVEDIR=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: DALVIK_JAVAVM=-5476376624172294800
+Env: JAVA_HOME=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25
+Env: FCL_NATIVEDIR=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: SDL_EGL_LIBRARY=/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libEGL_freedreno.so
+Env: DRIVER_PATH=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: LD_LIBRARY_PATH=/data/user/0/com.tungsten.fcl/app_runtime/jna:/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64:/data/user/0/com.tungsten.fcl/app_runtime_mod:/system/lib64:/vendor/lib64:/vendor/lib64/hw:/system_ext/lib64:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a:/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Env: DRIVER_GPU=adreno
+Env: MESA_DEBUG=1
+Env: FCL_VERSION_CODE=1341
+Env: MESA_LOADER_DRIVER_OVERRIDE=freedreno
+Env: POJAV_RENDERER=opengles3_desktopgl_freedreno
+Env: SDL_OPENGL_LIBRARY=/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libEGL_freedreno.so
+Env: DRIVER_LIB=libvulkan_freedreno.so
+Env: FORCE_VSYNC=false
+Env: MESA_GLSL_VERSION_OVERRIDE=460
+Env: MOD_ANDROID_RUNTIME=/data/user/0/com.tungsten.fcl/app_runtime_mod
+Env: allow_higher_compat_version=true
+Env: VULKAN_DRIVER_SYSTEM=1
+Env: MESA_GL_VERSION_OVERRIDE=4.6
+Env: POJAVEXEC_EGL=libEGL_freedreno.so
+Env: TMPDIR=/data/user/0/com.tungsten.fcl/cache
+Env: LIBGL_ES=3
+Env: DALVIK_APPLICATION=0x398a
+Env: force_glsl_extensions_warn=true
+Env: EGL_LOG_LEVEL=debug
+Env: LIBGL_DEBUG=verbose
+Env: ALSOFT_DRIVERS=opensl
+Env: HOME=/storage/emulated/0/FCL/log
+==================== DLOPEN ====================
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjli.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjvm.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfreetype.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libverify.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjava.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnio.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_headless.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfontmanager.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjavajpeg.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjava.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfreetype.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libj2pkcs11.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libinstrument.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_xawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libverify.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libj2gss.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/librmi.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libprefs.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsyslookup.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjdwp.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsctp.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmlib_image.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjvm.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server/libjsig.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libfontmanager.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libsleef.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement_ext.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libnio.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libmanagement_agent.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libzip.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libdt_socket.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/liblcms.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjsig.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libawt_headless.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjli.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjaas.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjimage.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libextnet.so
+DLOPEN: loading /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/libjsound.so
+DLOPEN: loading /data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64/libopenal.so
+Working directory: /storage/emulated/0/FCL/.minecraft/versions/26.3
+[fcl-egl] shim loaded (ctor) dir=/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64
+[fcl-egl] preload /data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libdrm.so failed: dlopen failed: library "/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libdrm.so" not found
+[fcl-egl] ctor: real=0xffce27e3754fff1 getproc=0x78af3afc68 dlerror=(null)
+DLOPEN: loading /data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libEGL_freedreno.so
+==================== Minecraft Arguments ====================
+Java argument: /data/user/0/com.tungsten.fcl/app_runtime/java/jre25/bin/java
+Java argument: -Djava.awt.headless=false
+Java argument: -Dcacio.managed.screensize=2880x1800
+Java argument: -Dcacio.font.fontmanager=sun.awt.X11FontManager
+Java argument: -Dcacio.font.fontscaler=sun.font.FreetypeFontScaler
+Java argument: -Dswing.defaultlaf=javax.swing.plaf.nimbus.NimbusLookAndFeel
+Java argument: -Dawt.toolkit=com.github.caciocavallosilano.cacio.ctc.CTCToolkit
+Java argument: -Djava.awt.graphicsenv=com.github.caciocavallosilano.cacio.ctc.CTCGraphicsEnvironment
+Java argument: -javaagent:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-agent.jar
+Java argument: --add-exports=java.desktop/java.awt=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/java.awt.peer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.image=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.java2d=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/java.awt.dnd.peer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.event=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.awt.datatransfer=ALL-UNNAMED
+Java argument: --add-exports=java.desktop/sun.font=ALL-UNNAMED
+Java argument: --add-exports=java.base/sun.security.action=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.util=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/java.awt=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/sun.font=ALL-UNNAMED
+Java argument: --add-opens=java.desktop/sun.java2d=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+Java argument: --add-opens=java.base/java.net=ALL-UNNAMED
+Java argument: -Xbootclasspath/a:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-agent.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-shared-1.19.1-SNAPSHOT.jar:/data/user/0/com.tungsten.fcl/app_runtime/caciocavallo17/cacio-tta-1.19.1-SNAPSHOT.jar
+Java argument: -Xmx2324m
+Java argument: -Xms512m
+Java argument: -Dfile.encoding=UTF-8
+Java argument: -Dstdout.encoding=UTF-8
+Java argument: -Dstderr.encoding=UTF-8
+Java argument: -Djava.rmi.server.useCodebaseOnly=true
+Java argument: -Dcom.sun.jndi.rmi.object.trustURLCodebase=false
+Java argument: -Dcom.sun.jndi.cosnaming.object.trustURLCodebase=false
+Java argument: -Dlog4j2.formatMsgNoLookups=true
+Java argument: -Dlog4j.configurationFile=/storage/emulated/0/FCL/.minecraft/versions/26.3/log4j2.xml
+Java argument: -Dminecraft.client.jar=/storage/emulated/0/FCL/.minecraft/versions/26.3/26.3.jar
+Java argument: -XX:ActiveProcessorCount=8
+Java argument: -Dfml.ignoreInvalidMinecraftCertificates=true
+Java argument: -Dfml.ignorePatchDiscrepancies=true
+Java argument: -Dext.net.resolvPath=/data/user/0/com.tungsten.fcl/app_runtime/java/resolv.conf
+Java argument: -Djava.io.tmpdir=/data/user/0/com.tungsten.fcl/cache/fclauncher
+Java argument: -Dos.name=Linux
+Java argument: -Dos.version=Android-15
+Java argument: -Dorg.lwjgl.opengl.libname=/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libEGL_freedreno.so
+Java argument: -Dorg.lwjgl.egl.libname=/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64/libEGL_freedreno.so
+Java argument: -Dorg.lwjgl.openal.libname=/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64/libopenal.so
+Java argument: -Dorg.lwjgl.freetype.libname=/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a/libfreetype.so
+Java argument: -Dorg.lwjgl.librarypath=/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a
+Java argument: -Dorg.lwjgl.system.allocator=system
+Java argument: -Dfml.earlyprogresswindow=false
+Java argument: -Dglfwstub.initEgl=false
+Java argument: -Dloader.disable_forked_guis=true
+Java argument: -Duser.home=/storage/emulated/0/FCL/.minecraft
+Java argument: -Duser.language=zh
+Java argument: -Duser.country=CN
+Java argument: -Duser.timezone=Asia/Shanghai
+Java argument: -Dorg.lwjgl.vulkan.libname=libvulkan.so
+Java argument: -Dorg.lwjgl.spvc.libname=spirv-cross-c-shared
+Java argument: -Dsodium.checks.issue2561=false
+Java argument: -Djdk.lang.Process.launchMechanism=FORK
+Java argument: -Dcpu.name=SM8475
+Java argument: -Djna.boot.library.path=/data/user/0/com.tungsten.fcl/app_runtime/jna/5.17.0
+Java argument: -javaagent:/data/user/0/com.tungsten.fcl/files/plugins/MioLibPatcher.jar
+Java argument: -XX:StackShadowPages=32
+Java argument: --enable-native-access=ALL-UNNAMED
+Java argument: --add-exports
+Java argument: java.base/jdk.internal.misc=ALL-UNNAMED
+Java argument: -Djava.library.path=/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib:/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/jli:/data/user/0/com.tungsten.fcl/app_runtime/java/jre25/lib/server:/data/user/0/com.tungsten.fcl/app_runtime/jna:/data/app/~~ypdhlh2ckKxGPvw9NsTLUA==/com.a730.mesa.egl263-WntU6oxFZOh6BPhEdU-q7g==/lib/arm64:/data/user/0/com.tungsten.fcl/app_runtime_mod:/system/lib64:/vendor/lib64:/vendor/lib64/hw:/system_ext/lib64:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/natives/arm64-v8a:/data/app/~~0KSmcRYfqX0AMAK1s2nSOA==/com.tungsten.fcl-A5zt1Ii5IMrLKzRTtsm-Hw==/lib/arm64
+Java argument: -Djna.tmpdir=/data/user/0/com.tungsten.fcl/cache/fclauncher/jna
+Java argument: -Dorg.lwjgl.system.SharedLibraryExtractPath=/data/user/0/com.tungsten.fcl/cache/fclauncher/lwjgl
+Java argument: -Dio.netty.native.workdir=/data/user/0/com.tungsten.fcl/cache/fclauncher/netty
+Java argument: -Dminecraft.launcher.brand=Fold Craft Launcher
+Java argument: -Dminecraft.launcher.version=1.3.4.1
+Java argument: -cp
+Java argument: /data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-3.4.1-merged-modules.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-spng.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-stb.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-freetype.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-nanovg.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-shaderc.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-spvc.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-vulkan.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-openal.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-tinyfd.jar:/data/user/0/com.tungsten.fcl/app_runtime/lwjgl/3.4.1/lwjgl-vma.jar:/storage/emulated/0/FCL/.minecraft/libraries/at/yawk/lz4/lz4-java/1.10.1/lz4-java-1.10.1.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/azure/azure-json/1.4.0/azure-json-1.4.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/github/oshi/oshi-core/6.9.0/oshi-core-6.9.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/code/gson/gson/2.14.0/gson-2.14.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/microsoft/azure/msal4j/1.24.1/msal4j-1.24.1.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/authlib/10.0.77/authlib-10.0.77.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/brigadier/1.3.11/brigadier-1.3.11.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/datafixerupper/10.0.21/datafixerupper-10.0.21.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/jtracy/1.14.38/jtracy-1.14.38.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/logging/1.7.12/logging-1.7.12.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/storage/emulated/0/FCL/.minecraft/libraries/com/mojang/text2speech/1.19.12/text2speech-1.19.12.jar:/storage/emulated/0/FCL/.minecraft/libraries/commons-codec/commons-codec/1.22.0/commons-codec-1.22.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-buffer/4.2.16.Final/netty-buffer-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-base/4.2.16.Final/netty-codec-base-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-compression/4.2.16.Final/netty-codec-compression-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-codec-http/4.2.16.Final/netty-codec-http-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-common/4.2.16.Final/netty-common-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-handler/4.2.16.Final/netty-handler-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-resolver/4.2.16.Final/netty-resolver-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-classes-epoll/4.2.16.Final/netty-transport-classes-epoll-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-classes-kqueue/4.2.16.Final/netty-transport-classes-kqueue-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport-native-unix-common/4.2.16.Final/netty-transport-native-unix-common-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/io/netty/netty-transport/4.2.16.Final/netty-transport-4.2.16.Final.jar:/storage/emulated/0/FCL/.minecraft/libraries/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/java/dev/jna/jna-platform/5.17.0/jna-platform-5.17.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-api/2.26.0/log4j-api-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-core/2.26.0/log4j-core-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/apache/logging/log4j/log4j-slf4j2-impl/2.26.0/log4j-slf4j2-impl-2.26.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/joml/joml/1.10.9/joml-1.10.9.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/storage/emulated/0/FCL/.minecraft/libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/data/user/0/com.tungsten.fcl/files/plugins/MioLaunchWrapper.jar:/storage/emulated/0/FCL/.minecraft/versions/26.3/26.3.jar
+Java argument: --add-exports
+Java argument: net.minecraft.client.main/net.minecraft.client.main=ALL-UNNAMED
+MainClass: mio.Wrapper
+MainClass: net.minecraft.client.main.Main
+Minecraft argument: --username
+Minecraft argument: ymxdxy_lcys
+Minecraft argument: --version
+Minecraft argument: 26.3
+Minecraft argument: --gameDir
+Minecraft argument: /storage/emulated/0/FCL/.minecraft/versions/26.3
+Minecraft argument: --assetsDir
+Minecraft argument: /storage/emulated/0/FCL/.minecraft/assets
+Minecraft argument: --assetIndex
+Minecraft argument: 34
+Minecraft argument: --uuid
+Minecraft argument: 6870aa30e90540178fe572ee2697e8ed
+Minecraft argument: --accessToken
+Minecraft argument: ***
+Minecraft argument: --clientId
+Minecraft argument: ${clientid}
+Minecraft argument: --xuid
+Minecraft argument: ${auth_xuid}
+Minecraft argument: --versionType
+Minecraft argument: Fold Craft Launcher
+Minecraft argument: --width
+Minecraft argument: 2880
+Minecraft argument: --height
+Minecraft argument: 1800
+Successfully initialized exit hook, stub: 0x79c3f81fa0SDL_Hook: Successfully initialized SDL hooks, stubs: InitSubSystem=0x79c3f7bf70 GetWindowFromEvent=0x79c3f7c510 GetWindowFromID=0x79c3f7c630 LoadFunction=0x79c3f7bdc0 CreateWindow=0x79c3f7c990 CreateWindowWithProps=0x79c3f7c480 LoadObject=0x79c3f7ccf0 UnloadObject=0x79c3f7b790 DestroyWindow=0x79c3f7cab0
+Hook success
+Done processing args
+Found JLI lib
+Calling JLI_Launch
+WARNING: Unknown module: net.minecraft.client.main specified to --add-exports
+WARNING: package sun.security.action not in java.base
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.github.caciocavallosilano.cacio.agent.CTCJavaAgent
+WARNING: Please consider reporting this to the maintainers of class com.github.caciocavallosilano.cacio.agent.CTCJavaAgent
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[MioLibPatcher/INFO]: MioPatcher is running!
+[MioLibPatcher/INFO]: Patch target class: org/lwjgl/system/Library
+Registered forkAndExec
+Installing LWJGL dlopen() hook
+EGLBridge: LWJGL-side Vulkan loader requested the Vulkan handle
+OSMDroid: loading vulkan regularly...
+OSMDroid: loaded vulkan, ptr=0x5ced9960c4d6bb19
+[MioLibPatcher/INFO]: Patch target class: oshi/hardware/platform/linux/LinuxCentralProcessor
+[MioLibPatcher/INFO]: Patch target class: oshi/hardware/CentralProcessor$ProcessorIdentifier
+[16:21:34] [main/WARN]: Did not find udev library in operating system. Some features may not work.
+[16:21:34] [Datafixer Bootstrap #0/INFO]: 307 Datafixer optimizations took 916 milliseconds
+[16:21:34] [main/WARN]: File not found or not readable: /proc/stat
+[16:21:34] [main/WARN]: File not found or not readable: /etc/os-release
+[16:21:34] [main/WARN]: File not found or not readable: /etc/lsb-release
+[16:21:34] [main/WARN]: File not found or not readable: /proc/version
+[16:21:39] [Render thread/INFO]: Environment: Environment[discoveryUrl=https://discovery.minecraftservices.com/minecraft/client, name=PROD]
+[16:21:39] [Render thread/INFO]: Setting user: ymxdxy_lcys
+[16:21:40] [Render thread/INFO]: Backend library: LWJGL version 3.4.1-snapshot+SNAPSHOT
+SDL dlsym proxy for SDL_InitSubSystem
+[16:21:40] [Render thread/INFO]: SDL [SYSTEM]: App name: Minecraft
+[16:21:40] [Render thread/INFO]: SDL [SYSTEM]: App version: 26.3
+[16:21:40] [Render thread/INFO]: SDL [SYSTEM]: App ID: com.mojang.minecraft
+[16:21:40] [Render thread/INFO]: SDL [SYSTEM]: SDL revision: 
+SDL dlsym proxy for SDL_CreateWindow
+SDL dlsym proxy for SDL_CreateWindowWithProperties
+SDL dlsym proxy for SDL_GetWindowFromID
+SDL dlsym proxy for SDL_DestroyWindow
+[fcl-egl] KGSL fd=138 driver=freedreno
+MESA-LOADER: failed to retrieve device information
+ATTENTION: default value of option force_glsl_extensions_warn overridden by environment.
+ATTENTION: default value of option allow_higher_compat_version overridden by environment.
+MESA-LOADER: failed to retrieve device information
+[fcl-egl] KGSL screen FAILED swrast=0
+[fcl-egl] KGSL fd=138 driver=freedreno
+MESA-LOADER: failed to retrieve device information
+ATTENTION: default value of option force_glsl_extensions_warn overridden by environment.
+ATTENTION: default value of option allow_higher_compat_version overridden by environment.
+MESA-LOADER: failed to retrieve device information
+[fcl-egl] KGSL screen FAILED swrast=0
+[fcl-egl] KGSL fd=138 driver=freedreno
+MESA-LOADER: failed to retrieve device information
+ATTENTION: default value of option force_glsl_extensions_warn overridden by environment.
+ATTENTION: default value of option allow_higher_compat_version overridden by environment.
+MESA-LOADER: failed to retrieve device information
+[fcl-egl] KGSL screen FAILED swrast=0
+ATTENTION: default value of option force_glsl_extensions_warn overridden by environment.
+ATTENTION: default value of option allow_higher_compat_version overridden by environment.
+[16:21:40] [Render thread/ERROR]: Failed to create backend OpenGL
+com.mojang.renderpearl.api.device.BackendCreationException: OpenGL is not supported: Could not initialize EGL
+	at com.mojang.renderpearl.backend.opengl.GlBackend.loadLibrary(GlBackend.java:36)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:530)
+	at net.minecraft.client.main.Main.main(Main.java:278)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at mio.Wrapper.main(Wrapper.java:21)
+[16:21:40] [Render thread/WARN]: Device [Adreno (TM) 730] does not support required features from FeatureSet [Minecraft base required], missing: [VkPhysicalDeviceDynamicRenderingFeatures.dynamicRendering]
+[16:21:40] [Render thread/WARN]: Device [Adreno (TM) 730] does not support required extensions from FeatureSet [Minecraft base required], missing: [VK_KHR_dynamic_rendering]
+[16:21:40] [Render thread/WARN]: Device [Adreno (TM) 730] does not support Vulkan 1.2
+[16:21:40] [Render thread/ERROR]: Failed to create backend Vulkan
+com.mojang.renderpearl.api.device.BackendCreationException: Device missing capabilities
+	at com.mojang.renderpearl.backend.vulkan.VulkanBackend.checkDeviceSuitability(VulkanBackend.java:366)
+	at com.mojang.renderpearl.backend.vulkan.VulkanBackend.findPhysicalDevice(VulkanBackend.java:239)
+	at com.mojang.renderpearl.backend.vulkan.VulkanBackend.createDevice(VulkanBackend.java:140)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:533)
+	at net.minecraft.client.main.Main.main(Main.java:278)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at mio.Wrapper.main(Wrapper.java:21)
+[16:21:47] [Download-1/WARN]: Couldn't look up profile properties for 6870aa30-e905-4017-8fe5-72ee2697e8ed
+com.mojang.authlib.exceptions.MinecraftClientException: Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/6870aa30e90540178fe572ee2697e8ed?unsigned=false due to Read timed out
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readServiceResponse(MinecraftClient.java:151)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.getWithEtag(MinecraftClient.java:81)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:65)
+	at com.mojang.authlib.services.MinecraftServicesSessionService.fetchProfileUncached(MinecraftServicesSessionService.java:189)
+	at com.mojang.authlib.services.MinecraftServicesSessionService.fetchProfile(MinecraftServicesSessionService.java:161)
+	at net.minecraft.client.Minecraft.lambda$new$0(Minecraft.java:447)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:277)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:302)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:354)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:798)
+	at java.base/java.net.Socket$SocketInputStream.implRead(Socket.java:974)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:964)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.read(SSLSocketInputRecord.java:489)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.readHeader(SSLSocketInputRecord.java:483)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.bytesInCompletePacket(SSLSocketInputRecord.java:70)
+	at java.base/sun.security.ssl.SSLSocketImpl.readApplicationRecord(SSLSocketImpl.java:1461)
+	at java.base/sun.security.ssl.SSLSocketImpl$AppInputStream.read(SSLSocketImpl.java:1068)
+	at java.base/java.io.BufferedInputStream.fill(BufferedInputStream.java:289)
+	at java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:330)
+	at java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:388)
+	at java.base/sun.net.www.http.HttpClient.parseHTTPHeader(HttpClient.java:795)
+	at java.base/sun.net.www.http.HttpClient.parseHTTP(HttpClient.java:727)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1393)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1303)
+	at java.base/java.net.HttpURLConnection.getResponseCode(HttpURLConnection.java:493)
+	at java.base/sun.net.www.protocol.https.HttpsURLConnectionImpl.getResponseCode(HttpsURLConnectionImpl.java:307)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readServiceResponse(MinecraftClient.java:130)
+	... 9 more

@@ -1,0 +1,11 @@
+[1/25] Generating src/git_sha1.h with a custom command
+[2/11] Compiling C object src/freedreno/drm/libfreedreno_drm.a.p/kgsl_kgsl_device.c.o
+[3/11] Compiling C object src/freedreno/drm/libfreedreno_drm.a.p/freedreno_device.c.o
+[4/11] Compiling C object src/freedreno/drm/libfreedreno_drm.a.p/kgsl_kgsl_pipe.c.o
+[5/11] Linking static target src/freedreno/drm/libfreedreno_drm.a
+[6/11] Compiling C object src/gallium/drivers/freedreno/libfreedreno.a.p/freedreno_screen.c.o
+[7/11] Linking static target src/gallium/drivers/freedreno/libfreedreno.a
+[8/11] Linking target src/gallium/targets/dri/libgallium_dri.so
+[9/11] Generating symbol file src/gallium/targets/dri/libgallium_dri.so.p/libgallium_dri.so.symbols
+[10/11] Linking target src/mesa/glapi/es2api/libGLESv2.so
+[11/11] Linking target src/egl/libEGL.so

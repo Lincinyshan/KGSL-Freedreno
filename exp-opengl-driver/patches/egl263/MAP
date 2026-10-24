@@ -1,9 +1,11 @@
-# Mesa 26.3.0-rc1 的 EGL/KGSL 补丁映射（source 相对于 patches/egl263/）
-platform_android.c  src/egl/drivers/dri2/platform_android.c
-egl_dri2.c          src/egl/drivers/dri2/egl_dri2.c
-egl_dri2.h          src/egl/drivers/dri2/egl_dri2.h
-eglcurrent.h        src/egl/main/eglcurrent.h
-pipe_loader_drm.c   src/gallium/auxiliary/pipe-loader/pipe_loader_drm.c
+# Mesa 26.3.0-rc1 的 EGL/KGSL 补丁映射
+platform_android.c   src/egl/drivers/dri2/platform_android.c
+egl_dri2.c           src/egl/drivers/dri2/egl_dri2.c
+egl_dri2.h           src/egl/drivers/dri2/egl_dri2.h
+eglcurrent.h         src/egl/main/eglcurrent.h
+pipe_loader_drm.c    src/gallium/auxiliary/pipe-loader/pipe_loader_drm.c
 u_gralloc_internal.c src/util/u_gralloc/u_gralloc_internal.c
-freedreno_device.c  src/freedreno/drm/freedreno_device.c
-drm_meson.build     src/freedreno/drm/meson.build
+dri2_frontend.c      src/gallium/frontends/dri/dri2.c
+freedreno_screen.c   src/gallium/drivers/freedreno/freedreno_screen.c
+freedreno_device.c   src/freedreno/drm/freedreno_device.c
+drm_meson.build      src/freedreno/drm/meson.build

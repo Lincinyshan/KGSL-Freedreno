@@ -141,7 +141,7 @@ pipe_loader_drm_probe_fd_nodup(struct pipe_loader_device **dev, int fd, bool zin
    /* FCL: Android KGSL 没有 DRM 节点，loader_get_driver_for_fd() 认不出驱动；
     * 这里的 fd 来自 /dev/kgsl-3d0（EGL 侧设置 FCL_FREEDRENO_KGSL=1）。 */
    if (!ddev->base.driver_name && getenv("FCL_FREEDRENO_KGSL"))
-      ddev->base.driver_name = strdup("freedreno");
+      ddev->base.driver_name = strdup("kgsl");
    if (!ddev->base.driver_name)
       goto fail;
 
@@ -439,7 +439,15 @@ pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
 
-   return ddev->dd->create_screen(ddev->fd, config);
+   fprintf(stderr, "[fcl-dri] create_screen: dd=%s fn=%p fd=%d\n",
+           ddev->dd ? ddev->dd->driver_name : "(null dd)",
+           ddev->dd ? (void *)(uintptr_t)ddev->dd->create_screen : NULL,
+           ddev->fd);
+   fflush(stderr);
+   struct pipe_screen *ps = ddev->dd->create_screen(ddev->fd, config);
+   fprintf(stderr, "[fcl-dri] create_screen -> %p\n", (void *)ps);
+   fflush(stderr);
+   return ps;
 }
 
 const struct driOptionDescription *

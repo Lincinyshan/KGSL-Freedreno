@@ -17,7 +17,11 @@ kgsl_device_new(int fd)
     struct kgsl_devinfo info;
 
     /* Try to read the device info to detect if the FD is really KGSL */
-    if(kgsl_get_prop(fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info)))
+    int prop_ret = kgsl_get_prop(fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info));
+    fprintf(stderr, "[fcl-dri] kgsl_get_prop -> %d (errno=%d)\n", prop_ret,
+            prop_ret ? errno : 0);
+    fflush(stderr);
+    if (prop_ret)
         return NULL;
 
     kgsl_dev = calloc(1, sizeof(*kgsl_dev));

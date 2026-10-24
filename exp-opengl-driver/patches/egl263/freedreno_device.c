@@ -40,11 +40,17 @@ fd_device_new(int fd)
 
    /* figure out if we are kgsl or msm drm driver: */
    version = drmGetVersion(fd);
+   fprintf(stderr, "[fcl-dri] fd_device_new fd=%d version=%p\n", fd,
+           (void *)version);
+   fflush(stderr);
    if (!version) {
 #if HAVE_FREEDRENO_KGSL
       /* Android 的 KGSL 不实现 DRM_IOCTL_VERSION（返回 ENOTTY），
        * 即便是合法的 /dev/kgsl-3d0 fd，drmGetVersion() 也会失败。 */
       dev = kgsl_device_new(fd);
+      fprintf(stderr, "[fcl-dri] kgsl_device_new(fd=%d) -> %p\n", fd,
+              (void *)dev);
+      fflush(stderr);
       if (dev)
          goto out;
 #endif

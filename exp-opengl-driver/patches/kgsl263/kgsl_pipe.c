@@ -171,11 +171,15 @@ struct fd_pipe *kgsl_pipe_new(struct fd_device *dev, enum fd_pipe_id id,
     pipe->funcs = &pipe_funcs;
 
     struct kgsl_devinfo info;
-    if(kgsl_get_prop(dev->fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info)))
-        goto fail;
-
-    uint64_t gmem_iova;
-    if(kgsl_get_prop(dev->fd, KGSL_PROP_UCHE_GMEM_VADDR, &gmem_iova, sizeof(gmem_iova)))
+    int r1 = kgsl_get_prop(dev->fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info));
+    uint64_t gmem_iova = 0;
+    int r2 = r1 ? -1
+                : kgsl_get_prop(dev->fd, KGSL_PROP_UCHE_GMEM_VADDR, &gmem_iova,
+                                sizeof(gmem_iova));
+    fprintf(stderr, "[fcl-dri] kgsl_pipe_new: devinfo=%d gmem=%d (errno=%d)\n",
+            r1, r2, (r1 || r2) ? errno : 0);
+    fflush(stderr);
+    if (r1 || r2)
         goto fail;
 
     kgsl_pipe->dev_id.gpu_id =
