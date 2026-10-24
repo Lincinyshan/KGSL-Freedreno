@@ -20,6 +20,7 @@ BG_BOTTOM = (5, 14, 9)
 _accent = os.environ.get("ICON_ACCENT", "#FFA726").lstrip("#")
 ACCENT = tuple(int(_accent[i:i + 2], 16) for i in (0, 2, 4))
 BADGE = os.environ.get("ICON_BADGE", "NATIVE")
+SUBTITLE = os.environ.get("ICON_SUBTITLE", "")
 WHITE = (255, 255, 255)
 
 
@@ -60,6 +61,15 @@ def main():
     d.rounded_rectangle([cx - bar_w // 2, cy + h // 2 + 26,
                          cx + bar_w // 2, cy + h // 2 + 26 + bar_h],
                         bar_h // 2, fill=ACCENT + (255,))
+
+    # 副标题（例如 noUBWC），居中放在强调条下方
+    if SUBTITLE:
+        sub = ImageFont.truetype(FONT_MONO, int(SIZE * 0.105))
+        sb = d.textbbox((0, 0), SUBTITLE, font=sub)
+        sw2, sh2 = sb[2] - sb[0], sb[3] - sb[1]
+        sy = cy + h / 2 + 26 + bar_h + 26
+        d.text((cx - sw2 / 2 - sb[0], sy - sh2 / 2 - sb[1]), SUBTITLE,
+               font=sub, fill=ACCENT + (255,))
 
     # "NATIVE" badge, bottom-right corner (compact)
     small = ImageFont.truetype(FONT_MONO, int(SIZE * 0.082))
