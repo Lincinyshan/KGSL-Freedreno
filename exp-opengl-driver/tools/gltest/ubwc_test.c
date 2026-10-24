@@ -52,6 +52,7 @@ typedef GLenum (*PFN_glCheckFramebufferStatus)(GLenum);
 typedef void (*PFN_glClearColor)(GLfloat, GLfloat, GLfloat, GLfloat);
 typedef void (*PFN_glClear)(GLenum);
 typedef void (*PFN_glScissor)(GLint, GLint, GLsizei, GLsizei);
+typedef void (*PFN_glUniform1f)(GLint, GLfloat);
 typedef void (*PFN_glViewport)(GLint, GLint, GLsizei, GLsizei);
 typedef void (*PFN_glEnable)(GLenum);
 typedef void (*PFN_glDisable)(GLenum);
@@ -962,12 +963,210 @@ int ubwc_selftest_clears(void *egl, void *getproc)
    return failures ? 1 : 0;
 }
 
+
+/* T15：MC 图集的真实形态 —— NPOT + mipmap + 逐格局部上传。
+ * 每层都当 FBO 清一遍，回头再检查 level0 的每一格有没有被别的层踩坏
+ * （UBWC 的 flag buffer 是每层一段，最容易在这里算错）。 */
+int ubwc_selftest_mip_npot(void *egl, void *getproc)
+{
+   (void)egl; (void)getproc;
+   const int W0 = 1024, H0 = 512, LEVELS = 10;
+   const int CW = 128, CH = 64;       /* 8 x 8 格 */
+   GLuint tex = 0, rt = 0, rtFb = 0;
+   unsigned char cell[CW * CH * 4];
+   unsigned char px[4];
+   int failures = 0;
+
+   gl.GenTextures(1, &tex);
+   gl.BindTexture(GL_TEXTURE_2D, tex);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, 0x813D /*TEXTURE_MAX_LEVEL*/, LEVELS - 1);
+   for (int l = 0, w = W0, h = H0; l < LEVELS; l++, w /= 2, h /= 2)
+      gl.TexImage2D(GL_TEXTURE_2D, l, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+   /* 逐格上传（模拟图集里一格一格塞图） */
+   for (int cy = 0; cy < H0 / CH; cy++) {
+      for (int cx = 0; cx < W0 / CW; cx++) {
+         for (int i = 0; i < CW * CH; i++) {
+            cell[i * 4 + 0] = (unsigned char)(cx * 32);
+            cell[i * 4 + 1] = (unsigned char)(cy * 32);
+            cell[i * 4 + 2] = 200;
+            cell[i * 4 + 3] = 255;
+         }
+         gl.TexSubImage2D(GL_TEXTURE_2D, 0, cx * CW, cy * CH, CW, CH,
+                          GL_RGBA, GL_UNSIGNED_BYTE, cell);
+      }
+   }
+   gl.BindTexture(GL_TEXTURE_2D, 0);
+
+   rt = make_rt_sz((int *)&rtFb, W0, H0);
+
+   /* 把 level0 blit 到 RT，逐格校验 */
+#define CHECK_LEVEL0(tag)                                                        \
+   do {                                                                          \
+      gl.GenFramebuffers(1, &fbL0);                                              \
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fbL0);                                  \
+      gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,              \
+                              GL_TEXTURE_2D, tex, 0);                            \
+      gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fbL0);                             \
+      gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, rtFb);                             \
+      gl.BlitFramebuffer(0, 0, W0, H0, 0, 0, W0, H0, 0x4000, GL_NEAREST);        \
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);                                     \
+      gl.DeleteFramebuffers(1, &fbL0);                                           \
+      gl.Finish();                                                               \
+      int bad = 0;                                                               \
+      for (int cy = 0; cy < H0 / CH; cy++)                                       \
+         for (int cx = 0; cx < W0 / CW; cx++) {                                  \
+            read_px((int)rtFb, cx * CW + CW / 2, cy * CH + CH / 2, px);          \
+            if (!eq4(px, cx * 32, cy * 32, 200, 255)) {                          \
+               if (!bad)                                                         \
+                  LOGI("UBWC-MIPS: " tag " cell(%d,%d)=(%u,%u,%u) want (%d,%d,200)", \
+                       cx, cy, px[0], px[1], px[2], cx * 32, cy * 32);           \
+               bad++;                                                            \
+            }                                                                    \
+         }                                                                       \
+      failures += bad;                                                           \
+      LOGI("UBWC-MIPS: " tag " cells bad=%d", bad);                              \
+   } while (0)
+
+   GLuint fbL0 = 0;
+   CHECK_LEVEL0("after-upload");
+
+   /* 逐层当 FBO 清掉（每层都有自己的 UBWC flag 区） */
+   for (int l = 1; l < LEVELS - 1; l++) {
+      GLuint fb = 0;
+      int w = W0 >> l, h = H0 >> l;
+      gl.GenFramebuffers(1, &fb);
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+      gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, l);
+      gl.Viewport(0, 0, w, h);
+      gl.Enable(GL_SCISSOR_TEST);
+      gl.Scissor(0, 0, w, h);
+      gl.ClearColor(1, 1, 1, 1);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.Disable(GL_SCISSOR_TEST);
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+      gl.DeleteFramebuffers(1, &fb);
+   }
+   gl.Finish();
+   CHECK_LEVEL0("after-level-clears");
+
+   gl.DeleteFramebuffers(1, &rtFb);
+   gl.DeleteTextures(1, &rt);
+   gl.DeleteTextures(1, &tex);
+   LOGI("UBWC-MIPS: RESULT %s (failures=%d)", failures ? "FAIL" : "PASS", failures);
+   return failures ? 1 : 0;
+}
+
+
+/* T16：多层 mip 的 UBWC 纹理逐层采样（物品图集就是这种：带 mip、小尺寸、
+ * 各向异性过滤会一次读多层）。每层上传不同纯色，用 textureLod 精确取该层。 */
+int ubwc_selftest_mip_lod(void *egl, void *getproc)
+{
+   typedef void *(*PFN_gp)(const char *);
+   PFN_gp gp = (PFN_gp)getproc;
+#define GF(type, var, name) type var = (void *)(dlsym(egl, name) ? dlsym(egl, name) : gp(name)); if (!var) { LOGI("UBWC-MIPLOD: missing %s", name); return -1; }
+   GF(PFN_glCreateShader, CreateShader, "glCreateShader");
+   GF(PFN_glShaderSource, ShaderSource, "glShaderSource");
+   GF(PFN_glCompileShader, CompileShader, "glCompileShader");
+   GF(PFN_glGetShaderiv, GetShaderiv, "glGetShaderiv");
+   GF(PFN_glCreateProgram, CreateProgram, "glCreateProgram");
+   GF(PFN_glAttachShader, AttachShader, "glAttachShader");
+   GF(PFN_glLinkProgram, LinkProgram, "glLinkProgram");
+   GF(PFN_glUseProgram, UseProgram, "glUseProgram");
+   GF(PFN_glGetUniformLocation, GetUniformLocation, "glGetUniformLocation");
+   GF(PFN_glUniform1i, Uniform1i, "glUniform1i");
+   GF(PFN_glUniform1f, Uniform1f, "glUniform1f");
+   GF(PFN_glGenVertexArrays, GenVertexArrays, "glGenVertexArrays");
+   GF(PFN_glBindVertexArray, BindVertexArray, "glBindVertexArray");
+   GF(PFN_glGenBuffers, GenBuffers, "glGenBuffers");
+   GF(PFN_glBindBuffer, BindBuffer, "glBindBuffer");
+   GF(PFN_glBufferData, BufferData, "glBufferData");
+   GF(PFN_glVertexAttribPointer, VertexAttribPointer, "glVertexAttribPointer");
+   GF(PFN_glEnableVertexAttribArray, EnableVertexAttribArray, "glEnableVertexAttribArray");
+   GF(PFN_glDrawArrays, DrawArrays, "glDrawArrays");
+#undef GF
+
+   const char *vs_src = "#version 330 core\nlayout(location=0) in vec2 p;\nvoid main(){gl_Position=vec4(p,0,1);}\n";
+   const char *fs_src = "#version 330 core\nuniform sampler2D t;\nuniform float lod;\nout vec4 c;\nvoid main(){c=textureLod(t, vec2(0.5), lod);}\n";
+   GLuint vs = CreateShader(GL_VERTEX_SHADER), fs = CreateShader(GL_FRAGMENT_SHADER);
+   ShaderSource(vs, 1, &vs_src, NULL); CompileShader(vs);
+   ShaderSource(fs, 1, &fs_src, NULL); CompileShader(fs);
+   GLint ok = 0;
+   GetShaderiv(fs, GL_COMPILE_STATUS, &ok);
+   if (!ok) { LOGI("UBWC-MIPLOD: fs compile failed"); return -1; }
+   GLuint prog = CreateProgram(); AttachShader(prog, vs); AttachShader(prog, fs); LinkProgram(prog);
+   UseProgram(prog);
+   Uniform1i(GetUniformLocation(prog, "t"), 0);
+   GLint ulod = GetUniformLocation(prog, "lod");
+
+   GLuint vao = 0, vbo = 0;
+   GenVertexArrays(1, &vao); BindVertexArray(vao);
+   const float quad[8] = {-1, -1, 1, -1, -1, 1, 1, 1};
+   GenBuffers(1, &vbo); BindBuffer(GL_ARRAY_BUFFER, vbo);
+   BufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+   VertexAttribPointer(0, 2, GL_FLOAT, 0, 8, NULL);
+   EnableVertexAttribArray(0);
+
+   const int W0 = 1024, H0 = 512, LEVELS = 10, S = 256;
+   GLuint tex = 0;
+   gl.GenTextures(1, &tex);
+   gl.BindTexture(GL_TEXTURE_2D, tex);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 0x2703 /*LINEAR_MIPMAP_LINEAR*/);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, 0x813D /*TEXTURE_MAX_LEVEL*/, LEVELS - 1);
+   static unsigned char buf[1024 * 512 * 4];
+   for (int l = 0, w = W0, h = H0; l < LEVELS; l++, w /= 2, h /= 2) {
+      for (int i = 0; i < w * h; i++) {
+         buf[i * 4 + 0] = (unsigned char)(l * 25);
+         buf[i * 4 + 1] = (unsigned char)(255 - l * 25);
+         buf[i * 4 + 2] = 128;
+         buf[i * 4 + 3] = 255;
+      }
+      gl.TexImage2D(GL_TEXTURE_2D, l, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+   }
+   gl.BindTexture(GL_TEXTURE_2D, 0);
+
+   GLuint dst = 0, dstFb = 0;
+   dst = make_rt_sz((int *)&dstFb, S, S);
+   unsigned char px[4];
+   int failures = 0;
+   for (int l = 0; l < LEVELS; l++) {
+      gl.BindFramebuffer(GL_FRAMEBUFFER, dstFb);
+      gl.Viewport(0, 0, S, S);
+      gl.ClearColor(0, 0, 0, 1);
+      gl.Clear(GL_COLOR_BUFFER_BIT);
+      gl.BindTexture(GL_TEXTURE_2D, tex);
+      Uniform1f(ulod, (float)l);
+      BindVertexArray(vao);
+      DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+      gl.Finish();
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+      read_px((int)dstFb, S / 2, S / 2, px);
+      if (!eq4(px, l * 25, 255 - l * 25, 128, 255)) {
+         LOGI("UBWC-MIPLOD: level %d got (%u,%u,%u) want (%d,%d,128)",
+              l, px[0], px[1], px[2], l * 25, 255 - l * 25);
+         failures++;
+      }
+   }
+   gl.DeleteFramebuffers(1, &dstFb);
+   gl.DeleteTextures(1, &dst);
+   gl.DeleteTextures(1, &tex);
+   LOGI("UBWC-MIPLOD: RESULT %s (failures=%d/%d)", failures ? "FAIL" : "PASS",
+        failures, LEVELS);
+   return failures ? 1 : 0;
+}
+
 int ubwc_selftest(void *egl, void *getproc)
 {
    if (resolve(egl, getproc)) {
       LOGI("UBWC: SKIP (missing GL entry points)");
       return -1;
    }
+
+   ubwc_selftest_mip_npot(egl, getproc);
+   ubwc_selftest_mip_lod(egl, getproc);
 
    int fbA = 0, fbB = 0;
    GLuint texA = make_rt(&fbA);

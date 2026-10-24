@@ -22,37 +22,88 @@ static struct kgsl_pending_bo g_pending[KGSL_PENDING_MAX];
 static int g_pending_n;
 static simple_mtx_t g_pending_lock = SIMPLE_MTX_INITIALIZER;
 
+/* GPU 用完的 BO 在这里退役：优先放回 BO cache（保住命中率），
+ * 实在不能缓存才真正释放。
+ * 注意：不能持有 g_pending_lock 调用 fd_bo_cache_free()，因为它会顺带
+ * 清理过期条目并 destroy 别的 BO，那条路径会再次来拿这把锁。 */
 static void
-kgsl_pending_drain_locked(void)
+kgsl_pending_retire(struct fd_bo *bo)
 {
-    /* 队列按时间戳单调递增：只探测队首，队首没完成后面的也一定没完成，
-     * 避免每次销毁都对整个队列发 ioctl（那会明显拖慢帧率）。 */
-    while (g_pending_n > 0) {
+    if (bo->bo_reuse != NO_CACHE &&
+        fd_bo_cache_free(bo->bo_reuse == RING_CACHE ? &bo->dev->ring_cache
+                                                   : &bo->dev->bo_cache, bo) == 0)
+        return;
+
+    fd_bo_fini_common(bo);
+}
+
+/* 调用时必须持有 g_pending_lock：只把退役的 BO 摘出来，不做释放动作。 */
+static int
+kgsl_pending_collect_locked(struct fd_bo **out, int max)
+{
+    int n = 0;
+
+    /* 队列按时间戳单调递增：只探测队首，队首没完成后面的也一定没完成 */
+    while (g_pending_n > 0 && n < max) {
         struct kgsl_pending_bo *e = &g_pending[0];
         if (kgsl_wait_ts(e->dev, e->ctx, e->ts, 0) != 0)
             break;
-        fd_bo_fini_common(e->bo);
+
+        out[n++] = e->bo;
         g_pending_n--;
         if (g_pending_n > 0)
             memmove(&g_pending[0], &g_pending[1],
                     (size_t)g_pending_n * sizeof(g_pending[0]));
     }
+
+    return n;
+}
+
+static void
+kgsl_pending_flush(void)
+{
+    struct fd_bo *retired[32];
+    int n;
+
+    simple_mtx_lock(&g_pending_lock);
+    n = kgsl_pending_collect_locked(retired, ARRAY_SIZE(retired));
+    simple_mtx_unlock(&g_pending_lock);
+
+    for (int i = 0; i < n; i++)
+        kgsl_pending_retire(retired[i]);
 }
 
 static bool
 kgsl_pending_add(struct fd_bo *bo, struct fd_device *dev, uint32_t ctx, uint64_t ts)
 {
+    bool ok;
+
+    kgsl_pending_flush();
+
     simple_mtx_lock(&g_pending_lock);
-    kgsl_pending_drain_locked();
     if (g_pending_n >= KGSL_PENDING_MAX) {
+        /* 队列满：宁可阻塞等队首那次提交完成，也不能提前释放 BO */
+        struct kgsl_pending_bo head = g_pending[0];
+        struct fd_bo *retired[32];
+        int n;
+
+        (void)kgsl_wait_ts(head.dev, head.ctx, head.ts, 1000);
+        n = kgsl_pending_collect_locked(retired, ARRAY_SIZE(retired));
         simple_mtx_unlock(&g_pending_lock);
-        return false;
+        for (int i = 0; i < n; i++)
+            kgsl_pending_retire(retired[i]);
+        simple_mtx_lock(&g_pending_lock);
     }
-    g_pending[g_pending_n++] = (struct kgsl_pending_bo){
-        .bo = bo, .dev = dev, .ctx = ctx, .ts = ts,
-    };
+
+    ok = g_pending_n < KGSL_PENDING_MAX;
+    if (ok) {
+        g_pending[g_pending_n++] = (struct kgsl_pending_bo){
+            .bo = bo, .dev = dev, .ctx = ctx, .ts = ts,
+        };
+    }
     simple_mtx_unlock(&g_pending_lock);
-    return true;
+
+    return ok;
 }
 
 static uint64_t
@@ -85,13 +136,44 @@ kgsl_bo_madvise(struct fd_bo *bo, int willneed)
     return willneed;
 }
 
+static void
+kgsl_bo_cache_op(struct fd_bo *bo, unsigned int op)
+{
+    struct kgsl_gpumem_sync_cache req = {
+        .id = bo->handle,
+        .op = op,
+    };
+
+    kgsl_pipe_safe_ioctl(bo->dev->fd, IOCTL_KGSL_GPUMEM_SYNC_CACHE, &req);
+}
+
 static int
 kgsl_bo_cpu_prep(struct fd_bo *bo, struct fd_pipe *pipe, uint32_t op)
 {
-    /* KGSL 没有隐式同步。freedreno 在 CPU 写完 staging/write-combine BO 后
-     * 会调 cpu_prep(FLUSH)，期望数据对 GPU 可见；这里给一个完整内存屏障。 */
+    /* KGSL 没有隐式同步：先把这块 BO 上挂着 fence 的提交等完，CPU 才能碰它。
+     * freedreno 靠这个返回值判断「能不能直接 map / 要不要先 flush+stall」，
+     * 之前永远返回 0 等于告诉它「随便写」，于是 CPU 会盖掉 GPU 还在读的
+     * BO（staging 上传、贴图重传），表现出来就是像素级闪烁。
+     * NOSYNC 只是非阻塞探测，超时给 0。 */
+    for (uint32_t i = 0; i < bo->nr_fences; i++) {
+        struct fd_fence *fence = bo->fences[i];
+        int ret = fence->pipe->funcs->wait(fence->pipe, fence,
+                                           (op & FD_BO_PREP_NOSYNC) ? 0 : ~0);
+        if (ret)
+            return ret;
+    }
+
+    if (op & FD_BO_PREP_NOSYNC)
+        return 0;
+
+    /* CPU 写完要交给 GPU 读 / GPU 写完要给 CPU 读：KGSL 需要显式 cache 操作 */
     if (op & FD_BO_PREP_FLUSH)
-        __atomic_thread_fence(__ATOMIC_SEQ_CST);
+        kgsl_bo_cache_op(bo, KGSL_GPUMEM_CACHE_CLEAN);
+    else if (op & FD_BO_PREP_READ)
+        kgsl_bo_cache_op(bo, KGSL_GPUMEM_CACHE_INV);
+
+    /* write-combine 写缓冲：确保 CPU 的写真的落到内存 */
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
 
     return 0;
 }
@@ -121,14 +203,16 @@ kgsl_bo_destroy(struct fd_bo *bo)
     /* 没有 fence 记录的 BO（或 fence 等待没覆盖到的）：挂起，等 GPU 时间戳过。 */
     if (bo->nr_fences == 0) {
         struct kgsl_device *kdev = to_kgsl_device(bo->dev);
-        if (kdev->last_submit_ts &&
-            kgsl_pending_add(bo, bo->dev, kdev->last_submit_ctx,
-                             kdev->last_submit_ts))
-            return;
+        if (kdev->last_submit_ts) {
+            if (kgsl_pending_add(bo, bo->dev, kdev->last_submit_ctx,
+                                 kdev->last_submit_ts))
+                return;
+            /* 挂起队列实在放不下：同步等这次提交结束，绝不能提前释放 */
+            (void)kgsl_wait_ts(bo->dev, kdev->last_submit_ctx,
+                               kdev->last_submit_ts, 1000);
+        }
     } else {
-        simple_mtx_lock(&g_pending_lock);
-        kgsl_pending_drain_locked();
-        simple_mtx_unlock(&g_pending_lock);
+        kgsl_pending_flush();
     }
 
     fd_bo_fini_common(bo);

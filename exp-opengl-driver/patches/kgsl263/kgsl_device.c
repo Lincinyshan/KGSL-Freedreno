@@ -18,9 +18,6 @@ kgsl_device_new(int fd)
 
     /* Try to read the device info to detect if the FD is really KGSL */
     int prop_ret = kgsl_get_prop(fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info));
-    fprintf(stderr, "[fcl-dri] kgsl_get_prop -> %d (errno=%d)\n", prop_ret,
-            prop_ret ? errno : 0);
-    fflush(stderr);
     if (prop_ret)
         return NULL;
 
@@ -37,6 +34,9 @@ kgsl_device_new(int fd)
     util_queue_init(&dev->submit_queue, "sq", 8, 1, 0, NULL);
 
     dev->bo_size = sizeof(struct kgsl_bo);
+
+    /* KGSL 无隐式同步：BO 不能一释放就进 cache 复用（见 try_recycle） */
+    dev->no_recycle = true;
 
     return dev;
 }
