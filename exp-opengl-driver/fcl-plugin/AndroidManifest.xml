@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.a730.mesa.osmesa"
-    android:versionCode="1"
-    android:versionName="25.0.7">
+    android:versionCode="2"
+    android:versionName="25.0.7-r2">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
     <application
+        android:icon="@mipmap/ic_launcher"
         android:label="Mesa Freedreno A730 (GL 4.6)"
         android:hasCode="false"
         android:extractNativeLibs="true"
