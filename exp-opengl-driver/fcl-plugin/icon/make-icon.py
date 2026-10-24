@@ -17,7 +17,9 @@ FONT_MONO = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 
 BG_TOP = (16, 34, 22)
 BG_BOTTOM = (5, 14, 9)
-ACCENT = (255, 167, 38)
+_accent = os.environ.get("ICON_ACCENT", "#FFA726").lstrip("#")
+ACCENT = tuple(int(_accent[i:i + 2], 16) for i in (0, 2, 4))
+BADGE = os.environ.get("ICON_BADGE", "NATIVE")
 WHITE = (255, 255, 255)
 
 
@@ -61,7 +63,7 @@ def main():
 
     # "NATIVE" badge, bottom-right corner (compact)
     small = ImageFont.truetype(FONT_MONO, int(SIZE * 0.082))
-    label = "NATIVE"
+    label = BADGE
     b2 = d.textbbox((0, 0), label, font=small)
     sw, sh = b2[2] - b2[0], b2[3] - b2[1]
     pad = 9

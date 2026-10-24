@@ -11,8 +11,9 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 ndk="$script_dir/../../android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
 libdir="$script_dir/../release-26.3.0-rc1-a730-egl"; [ -n "$LIBDIR" ] && libdir="$LIBDIR"
 jar="$script_dir/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
-out="$script_dir/out-egl263"
-name="MesaFreedrenoEGL-A730-26.3rc1"
+out="${OUT_DIR:-$script_dir/out-egl263}"
+name="${APK_NAME:-MesaFreedrenoEGL-A730-26.3rc1}"
+manifest="${MANIFEST_OVERRIDE:-AndroidManifest-egl263.xml}"  # MANIFEST_OVERRIDE 可指定 release 版清单
 cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
 
 [ -f "$libdir/libEGL_mesa_gl.so" ] || { echo "missing $libdir/libEGL_mesa_gl.so"; exit 1; }
@@ -64,7 +65,7 @@ cd "$script_dir"
 # 1) resources (launcher icon)
 aapt2 compile --dir res -o "$out/res.zip"
 aapt2 link -o "$out/base.apk" -I "$jar" \
-    --manifest AndroidManifest-egl263.xml \
+    --manifest "$manifest" \
     --min-sdk-version 26 --target-sdk-version 34 \
     "$out/res.zip"
 
