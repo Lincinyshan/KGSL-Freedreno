@@ -24,6 +24,38 @@ cp "$libdir/libEGL_mesa_gl.so" "$libdir/libgallium_dri.so" "$out/apk/lib/arm64-v
 "$cc" -O2 -shared -fPIC -Wl,-soname,libEGL_freedreno.so \
     -o "$out/apk/lib/arm64-v8a/libEGL_freedreno.so" "$script_dir/../tools/egl_bridge_shim.c" -ldl
 
+# 校验 shim 导出的 EGL 入口：新版本游戏会逐个 dlsym，缺一个就判定
+# "OpenGL is not supported: Could not retrieve EGL function <名字>" 并回退 Vulkan。
+readelf_bin="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+[ -x "$readelf_bin" ] || readelf_bin=readelf
+exported="$($readelf_bin --dyn-syms "$out/apk/lib/arm64-v8a/libEGL_freedreno.so" | awk 'NF>=8 {print $8}' | tr '\n' ' ')"
+required="eglBindAPI eglBindTexImage eglChooseConfig eglClientWaitSync eglCopyBuffers
+ eglCreateContext eglCreateImage eglCreatePbufferFromClientBuffer eglCreatePbufferSurface
+ eglCreatePixmapSurface eglCreatePlatformPixmapSurface eglCreatePlatformWindowSurface
+ eglCreateSync eglCreateWindowSurface eglDestroyContext eglDestroyImage eglDestroySurface
+ eglDestroySync eglGetConfigAttrib eglGetConfigs eglGetCurrentContext eglGetCurrentDisplay
+ eglGetCurrentSurface eglGetDisplay eglGetError eglGetPlatformDisplay eglGetProcAddress
+ eglGetSyncAttrib eglInitialize eglMakeCurrent eglQueryAPI eglQueryContext eglQueryString
+ eglQuerySurface eglReleaseTexImage eglReleaseThread eglSurfaceAttrib eglSwapBuffers
+ eglSwapInterval eglTerminate eglWaitClient eglWaitGL eglWaitNative eglWaitSync
+ eglGetPlatformDisplayEXT eglCreatePlatformWindowSurfaceEXT eglCreatePlatformPixmapSurfaceEXT
+ eglSwapBuffersWithDamageEXT eglSwapBuffersWithDamageKHR eglCreateImageKHR eglDestroyImageKHR
+ eglCreateSyncKHR eglDestroySyncKHR eglClientWaitSyncKHR eglWaitSyncKHR eglGetSyncAttribKHR
+ eglPresentationTimeANDROID eglGetNativeClientBufferANDROID eglCreateNativeClientBufferANDROID
+ eglQueryDeviceStringEXT glXGetProcAddress glXGetProcAddressARB"
+missing=""
+for sym in $required; do
+    case " $exported " in
+        *" $sym "*) ;;
+        *) missing="$missing $sym" ;;
+    esac
+done
+if [ -n "$missing" ]; then
+    echo "ERROR: shim 缺少必需 EGL 导出:$missing"
+    exit 1
+fi
+echo "shim exports OK: $(echo $required | wc -w) required symbols present"
+
 cd "$script_dir"
 
 # 1) resources (launcher icon)

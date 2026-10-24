@@ -10,7 +10,7 @@ Mesa 25.0.7 · freedreno KGSL 后端 · 桌面 GL 4.6 + GLSL 4.60
 
 | 文件 | 说明 | sha256 |
 |---|---|---|
-| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 3 | `e89ed851…46229` |
+| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 4 | `6e244589…e077c` |
 | `release-25.0.7-a730-egl/libEGL_mesa_gl.so` | 自编 libEGL（droid 平台 + KGSL 钩子），SONAME `libEGL_mesa_gl.so` | `120ffb90…7cfb` |
 | `release-25.0.7-a730-egl/libgallium_dri.so` | freedreno Gallium 驱动 | `07bd302b…d8ca` |
 
@@ -94,9 +94,11 @@ debug keystore。
 6. **插件 shim 导出完整 EGL ABI**（`tools/egl_bridge_shim.c`）：除
    `eglGetProcAddress` / `glXGetProcAddress[ARB]` 外，还导出 55 个 EGL 1.0–1.5 核心
    与常用 EXT/KHR 入口（`eglGetDisplay`、`eglCreatePlatformWindowSurface`、
-   `eglSwapBuffersWithDamageKHR` 等），全部转发给真正的 libEGL。新版本游戏
-   （MC 26.3 / LWJGL 3.4.1 / SDL）会直接 `dlsym` 这些符号，缺一个就会判定
-   “OpenGL is not supported”并回退 Vulkan。
+   `eglSwapBuffersWithDamageKHR`、`eglPresentationTimeANDROID` 等），全部转发给
+   真正的 libEGL。新版本游戏（MC 26.3 / LWJGL 3.4.1 / SDL）会直接 `dlsym` 这些
+   符号，缺一个就会判定 “OpenGL is not supported” 并回退 Vulkan。
+   `build-egl-plugin.sh` 里有一份 62 个必需符号的清单，构建时会校验 shim 导出，
+   缺符号直接构建失败，避免“装上去才发现又缺一个”。
 
 调试时可参考 `tools/gltest/`：纯 native 的 NativeActivity 复现 APK
 （不需要 Java/dex），把 stderr 重定向到 App 私有目录，用

@@ -163,6 +163,7 @@ FWD(const char *, eglQueryString, (EGLDisplay d, EGLint name), (d, name))
 FWD(EGLBoolean, eglGetConfigs, (EGLDisplay d, EGLConfig *cfgs, EGLint n, EGLint *num), (d, cfgs, n, num))
 FWD(EGLBoolean, eglChooseConfig, (EGLDisplay d, const EGLint *attr, EGLConfig *cfgs, EGLint n, EGLint *num), (d, attr, cfgs, n, num))
 FWD(EGLBoolean, eglGetConfigAttrib, (EGLDisplay d, EGLConfig c, EGLint a, EGLint *v), (d, c, a, v))
+FWD(EGLint, eglGetError, (void), ())
 FWD(EGLSurface, eglCreateWindowSurface, (EGLDisplay d, EGLConfig c, EGLNativeWindowType w, const EGLint *attr), (d, c, w, attr))
 FWD(EGLSurface, eglCreatePbufferSurface, (EGLDisplay d, EGLConfig c, const EGLint *attr), (d, c, attr))
 FWD(EGLSurface, eglCreatePixmapSurface, (EGLDisplay d, EGLConfig c, EGLNativePixmapType p, const EGLint *attr), (d, c, p, attr))
@@ -216,3 +217,13 @@ FWD(EGLBoolean, eglDestroySyncKHR, (EGLDisplay d, EGLSync s), (d, s))
 FWD(EGLint, eglClientWaitSyncKHR, (EGLDisplay d, EGLSync s, EGLint flags, EGLTime t), (d, s, flags, t))
 FWD(EGLBoolean, eglWaitSyncKHR, (EGLDisplay d, EGLSync s, EGLint flags), (d, s, flags))
 FWD(EGLBoolean, eglGetSyncAttribKHR, (EGLDisplay d, EGLSync s, EGLint a, EGLint *v), (d, s, a, v))
+
+/* ---------------- Android / 设备相关扩展（SDL / LWJGL 会直接 dlsym） ------ */
+
+/* EGL_ANDROID_presentation_time */
+FWD(EGLBoolean, eglPresentationTimeANDROID, (EGLDisplay d, EGLSurface s, long long t), (d, s, t))
+/* EGL_ANDROID_get_native_client_buffer */
+FWD(EGLClientBuffer, eglGetNativeClientBufferANDROID, (const void *buffer), (buffer))
+FWD(EGLClientBuffer, eglCreateNativeClientBufferANDROID, (const EGLint *attr), (attr))
+/* EGL_EXT_device_query */
+FWD(const char *, eglQueryDeviceStringEXT, (void *device, EGLint name), (device, name))
