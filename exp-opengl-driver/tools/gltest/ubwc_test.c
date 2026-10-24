@@ -52,6 +52,7 @@ typedef GLenum (*PFN_glCheckFramebufferStatus)(GLenum);
 typedef void (*PFN_glClearColor)(GLfloat, GLfloat, GLfloat, GLfloat);
 typedef void (*PFN_glClear)(GLenum);
 typedef void (*PFN_glScissor)(GLint, GLint, GLsizei, GLsizei);
+typedef void (*PFN_glViewport)(GLint, GLint, GLsizei, GLsizei);
 typedef void (*PFN_glEnable)(GLenum);
 typedef void (*PFN_glDisable)(GLenum);
 typedef void (*PFN_glReadPixels)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
@@ -75,6 +76,7 @@ static struct {
    PFN_glClearColor ClearColor;
    PFN_glClear Clear;
    PFN_glScissor Scissor;
+   PFN_glViewport Viewport;
    PFN_glEnable Enable;
    PFN_glDisable Disable;
    PFN_glReadPixels ReadPixels;
@@ -109,6 +111,7 @@ static int resolve(void *egl, void *getproc)
    GET(ClearColor, "glClearColor");
    GET(Clear, "glClear");
    GET(Scissor, "glScissor");
+   GET(Viewport, "glViewport");
    GET(Enable, "glEnable");
    GET(Disable, "glDisable");
    GET(ReadPixels, "glReadPixels");
@@ -122,12 +125,12 @@ static int resolve(void *egl, void *getproc)
    return missing;
 }
 
-static GLuint make_rt(int *fb_out)
+static GLuint make_rt_sz(int *fb_out, int w, int h)
 {
    GLuint tex = 0, fb = 0;
    gl.GenTextures(1, &tex);
    gl.BindTexture(GL_TEXTURE_2D, tex);
-   gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, W, H, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+   gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
    gl.GenFramebuffers(1, &fb);
@@ -138,6 +141,11 @@ static GLuint make_rt(int *fb_out)
    gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
    *fb_out = (int)fb;
    return tex;
+}
+
+static GLuint make_rt(int *fb_out)
+{
+   return make_rt_sz(fb_out, W, H);
 }
 
 static int read_px(int fb, int x, int y, unsigned char out[4])
@@ -806,8 +814,8 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
    EnableVertexAttribArray(0);
 
    GLuint src = 0, srcFb = 0, dst = 0, dstFb = 0;
-   src = make_rt((int *)&srcFb);
-   dst = make_rt((int *)&dstFb);
+   src = make_rt_sz((int *)&srcFb, S, S);
+   dst = make_rt_sz((int *)&dstFb, S, S);
 
    unsigned char px[4];
    int failures = 0, first = -1;
@@ -830,6 +838,7 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
 
       /* 渲染进 UBWC RT：清红 + 中间绿块 */
       gl.BindFramebuffer(GL_FRAMEBUFFER, srcFb);
+      gl.Viewport(0, 0, S, S);
       gl.Enable(GL_SCISSOR_TEST);
       gl.Scissor(0, 0, S, S);
       gl.ClearColor(1, 0, 0, 1);
@@ -852,6 +861,7 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
 
       /* 把同一个 RT 当纹理采样到另一个 RT（反馈/别名） */
       gl.BindFramebuffer(GL_FRAMEBUFFER, dstFb);
+      gl.Viewport(0, 0, S, S);
       gl.ClearColor(0, 0, 0, 1);
       gl.Clear(GL_COLOR_BUFFER_BIT);
       gl.BindTexture(GL_TEXTURE_2D, src);   /* src 同时是上面渲染的 RT */
@@ -863,10 +873,10 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
       read_px((int)dstFb, S / 2, S / 2, px);
       int okc = eq4(px, 0, 255, 0, 255);
       if (first < 0)
-         LOGI("UBWC-FB(%d): center got %u,%u,%u want 0,255,0", px[0], px[1], px[2], S);
+         LOGI("UBWC-FB(S=%d): center=(%u,%u,%u) want 0,255,0", S, px[0], px[1], px[2]);
       read_px((int)dstFb, 8, 8, px);
       if (first < 0)
-         LOGI("UBWC-FB(%d): edge   got %u,%u,%u want 255,0,0", px[0], px[1], px[2], S);
+         LOGI("UBWC-FB(S=%d): edge  =(%u,%u,%u) want 255,0,0", S, px[0], px[1], px[2]);
       okc = okc && eq4(px, 255, 0, 0, 255);
       if (!okc) {
          failures++;

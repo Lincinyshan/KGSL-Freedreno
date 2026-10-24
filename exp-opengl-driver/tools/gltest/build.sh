@@ -2,9 +2,9 @@
 # 独立复现 APK：NativeActivity + 我们的 libEGL/libgallium_dri
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 ndk="$script_dir/../../../android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
-libdir="$script_dir/../../release-26.3.0-rc1-a730-egl"; [ -n "LIBDIR" ] && true
+libdir="${LIBDIR:-$script_dir/../../release-26.3.0-rc1-a730-egl}"
 jar="$script_dir/../../fcl-plugin/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
-out="$script_dir/out"
+out="${OUT:-$script_dir/out}"
 cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
 bt=/usr/lib/android-sdk/build-tools/29.0.3
 

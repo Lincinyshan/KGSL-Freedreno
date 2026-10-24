@@ -274,7 +274,29 @@ static void handle_cmd(struct android_app *app, int32_t cmd) {
    }
 }
 
+/* 试验钩子：/data/local/tmp/gltest.env 里每行 KEY=VALUE，在 dlopen 驱动前生效，
+ * 免得每次换 FD_MESA_DEBUG 都要重编 APK。 */
+static void load_env_file(void)
+{
+   FILE *fp = fopen("/data/local/tmp/gltest.env", "r");
+   if (!fp)
+      return;
+   char line[512];
+   while (fgets(line, sizeof(line), fp)) {
+      char *nl = strchr(line, '\n');
+      if (nl) *nl = 0;
+      char *eq = strchr(line, '=');
+      if (!eq || line[0] == '#')
+         continue;
+      *eq = 0;
+      setenv(line, eq + 1, 1);
+      LOGI("env hook: %s=%s", line, eq + 1);
+   }
+   fclose(fp);
+}
+
 void android_main(struct android_app *app) {
+   load_env_file();
    self_dir();
    /* stderr/stdout 在 NativeActivity 里默认不进 logcat，写到私有目录方便排查 */
    char logpath[600];
