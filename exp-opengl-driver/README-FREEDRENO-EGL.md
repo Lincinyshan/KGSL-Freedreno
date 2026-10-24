@@ -3,6 +3,9 @@
 生成时间：2026-10-24 · 目标设备：SM8475 / Adreno 730 v3 / Android 15
 Mesa 25.0.7 · freedreno KGSL 后端 · 桌面 GL 4.6 + GLSL 4.60
 
+> 本项目当前**只维护这一条 EGL 路线**；OSMesa 回读路线已冻结，见
+> `README-FREEDRENO-OSMESA.md` 顶部说明。
+
 ## 1. 产物
 
 | 文件 | 说明 | sha256 |

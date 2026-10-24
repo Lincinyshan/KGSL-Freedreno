@@ -1,4 +1,8 @@
-# Mesa freedreno OSMesa (OpenGL 4.6) for Adreno 730 — FCL 渲染器插件
+# Mesa freedreno OSMesa (OpenGL 4.6) for Adreno 730 — FCL 渲染器插件（**已冻结，不再维护**）
+
+> ⚠️ **本路线自 2026-10-24 起停止维护**：EGL 零拷贝直出（`README-FREEDRENO-EGL.md`）在
+> 同机型上 ~39fps，远高于本路线的 14fps（每帧全帧回读）。这里的内容仅作为历史记录，
+> 不再更新构建、图标、签名与校验和。
 
 生成时间：2026-10-23 · 目标设备：SM8475 / Adreno 730 v3（chip_id `0x07030002`）/ Android 15
 

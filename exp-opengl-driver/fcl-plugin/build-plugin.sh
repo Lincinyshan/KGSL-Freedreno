@@ -1,4 +1,5 @@
 #!/bin/bash -e
+# ⚠️ 已冻结，不再维护：EGL 直出路线见 build-egl-plugin.sh / README-FREEDRENO-EGL.md
 # Package the Mesa freedreno OSMesa library into an FCL (FoldCraftLauncher)
 # renderer-plugin APK.
 #
