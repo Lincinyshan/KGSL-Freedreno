@@ -26,13 +26,23 @@ static simple_mtx_t g_pending_lock = SIMPLE_MTX_INITIALIZER;
  * 实在不能缓存才真正释放。
  * 注意：不能持有 g_pending_lock 调用 fd_bo_cache_free()，因为它会顺带
  * 清理过期条目并 destroy 别的 BO，那条路径会再次来拿这把锁。 */
+/* fd_bo_cache_free() 会顺带清理过期条目、进而 destroy 别的 BO，可能再次
+ * 回到这里（递归）。用线程局部标记把这条递归链掐断，直接释放即可。 */
+static __thread bool tls_in_retire;
+
 static void
 kgsl_pending_retire(struct fd_bo *bo)
 {
-    if (bo->bo_reuse != NO_CACHE &&
-        fd_bo_cache_free(bo->bo_reuse == RING_CACHE ? &bo->dev->ring_cache
-                                                   : &bo->dev->bo_cache, bo) == 0)
-        return;
+    if (!tls_in_retire) {
+        tls_in_retire = true;
+        if (bo->bo_reuse != NO_CACHE &&
+            fd_bo_cache_free(bo->bo_reuse == RING_CACHE ? &bo->dev->ring_cache
+                                                       : &bo->dev->bo_cache, bo) == 0) {
+            tls_in_retire = false;
+            return;
+        }
+        tls_in_retire = false;
+    }
 
     fd_bo_fini_common(bo);
 }
