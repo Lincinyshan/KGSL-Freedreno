@@ -2,7 +2,7 @@
 # 独立复现 APK：NativeActivity + 我们的 libEGL/libgallium_dri
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 ndk="$script_dir/../../../android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
-libdir="$script_dir/../../release-25.0.7-a730-egl"; [ -n "LIBDIR" ] && true
+libdir="$script_dir/../../release-26.3.0-rc1-a730-egl"; [ -n "LIBDIR" ] && true
 jar="$script_dir/../../fcl-plugin/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
 out="$script_dir/out"
 cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
@@ -17,7 +17,7 @@ cp "$libdir/libEGL_mesa_gl.so" "$libdir/libgallium_dri.so" "$out/apk/lib/arm64-v
 
 "$cc" -O2 -shared -fPIC -Wl,-soname,libgltest.so \
     -o "$out/apk/lib/arm64-v8a/libgltest.so" \
-    "$script_dir/main.c" "$ndk/sources/android/native_app_glue/android_native_app_glue.c" \
+    "$script_dir/main.c" "$script_dir/ubwc_test.c" "$ndk/sources/android/native_app_glue/android_native_app_glue.c" \
     -I"$ndk/sources/android/native_app_glue" \
     -landroid -llog -lnativewindow -ldl -u ANativeActivity_onCreate
 

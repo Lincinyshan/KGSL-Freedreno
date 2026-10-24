@@ -150,7 +150,17 @@ static void run_test(ANativeWindow *win) {
 
    /* 用桌面 GL（立即模式），方便画三角形复现几何路径 */
    if (p_bind) p_bind(EGL_OPENGL_API);
-   EGLContext ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, NULL);
+   /* 请求与 MC 一致的 4.6 Core；失败则退回默认上下文 */
+   const EGLint ctx46[] = {
+      0x3098 /*EGL_CONTEXT_MAJOR_VERSION_KHR*/, 4,
+      0x30FB /*EGL_CONTEXT_MINOR_VERSION_KHR*/, 6,
+      0x30FD /*EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR*/, 0x1 /*CORE*/,
+      EGL_NONE
+   };
+   EGLContext ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, ctx46);
+   LOGI("context(4.6 core)=%p", (void *)ctx);
+   if (!ctx)
+      ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, NULL);
    LOGI("context(desktop GL)=%p err=0x%x", (void *)ctx, ctx ? 0 : p_err());
    if (!ctx) return;
 
@@ -184,6 +194,13 @@ static void run_test(ANativeWindow *win) {
    PFN_glGetError get_error = (PFN_glGetError)find_proc(egl, getproc, "glGetError");
    LOGI("draw funcs: enable=%p begin=%p frontend vertex=%p", (void *)enable,
         (void *)begin, (void *)vertex3f);
+
+   {
+      extern int ubwc_selftest(void *, void *);
+      LOGI("UBWC selftest begin");
+      int rc = ubwc_selftest(egl, (void *)getproc);
+      LOGI("UBWC selftest rc=%d", rc);
+   }
 
    if (viewport) viewport(0, 0, 2880, 1800);
    if (enable) { enable(0x0B71 /*DEPTH_TEST*/); }
