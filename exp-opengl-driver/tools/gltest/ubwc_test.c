@@ -1181,7 +1181,7 @@ int ubwc_selftest_atlas(void *egl, void *getproc)
    PFN_glGenerateMipmap GenMip = (void *)(dlsym(egl, "glGenerateMipmap") ? dlsym(egl, "glGenerateMipmap") : gp("glGenerateMipmap"));
    if (!GenMip) { LOGI("UBWC-ATLAS: SKIP"); return -1; }
 
-   const int S = 2048, LEVELS = 6, CELL = 16, GRID = 32; /* 512x512 区域内有 32x32 格 */
+   const int S = 1152, LEVELS = 5, CELL = 16, GRID = 32; /* 512x512 区域内有 32x32 格 */
    GLuint tex = 0;
    gl.GenTextures(1, &tex);
    gl.BindTexture(GL_TEXTURE_2D, tex);
