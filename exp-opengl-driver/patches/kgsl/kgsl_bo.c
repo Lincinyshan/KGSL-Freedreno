@@ -25,14 +25,17 @@ static simple_mtx_t g_pending_lock = SIMPLE_MTX_INITIALIZER;
 static void
 kgsl_pending_drain_locked(void)
 {
-    for (int i = 0; i < g_pending_n; ) {
-        struct kgsl_pending_bo *e = &g_pending[i];
-        if (kgsl_wait_ts(e->dev, e->ctx, e->ts, 0) == 0) {
-            fd_bo_fini_common(e->bo);
-            g_pending[i] = g_pending[--g_pending_n];
-        } else {
-            i++;
-        }
+    /* 队列按时间戳单调递增：只探测队首，队首没完成后面的也一定没完成，
+     * 避免每次销毁都对整个队列发 ioctl（那会明显拖慢帧率）。 */
+    while (g_pending_n > 0) {
+        struct kgsl_pending_bo *e = &g_pending[0];
+        if (kgsl_wait_ts(e->dev, e->ctx, e->ts, 0) != 0)
+            break;
+        fd_bo_fini_common(e->bo);
+        g_pending_n--;
+        if (g_pending_n > 0)
+            memmove(&g_pending[0], &g_pending[1],
+                    (size_t)g_pending_n * sizeof(g_pending[0]));
     }
 }
 
