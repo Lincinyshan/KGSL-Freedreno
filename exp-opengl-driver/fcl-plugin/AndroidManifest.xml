@@ -29,8 +29,8 @@
         <meta-data android:name="renderer" android:value="Freedreno-A730:libOSMesa_8.so:libEGL.so" />
         <meta-data android:name="boatEnv" android:value="" />
         <meta-data android:name="pojavEnv" android:value="POJAV_RENDERER=gallium_freedreno:LIB_MESA_NAME=libOSMesa_8.so:MESA_GL_VERSION_OVERRIDE=4.6:MESA_GLSL_VERSION_OVERRIDE=460:allow_higher_compat_version=true:force_glsl_extensions_warn=true" />
-        <!-- 26.3+ 强制 Vulkan，OpenGL/OSMesa 路径不再适用 -->
+        <!-- 26.3 也能用 OpenGL（游戏在 OpenGL 不可用时才回退 Vulkan） -->
         <meta-data android:name="minMCVer" android:value="" />
-        <meta-data android:name="maxMCVer" android:value="26.2" />
+        <meta-data android:name="maxMCVer" android:value="" />
     </application>
 </manifest>

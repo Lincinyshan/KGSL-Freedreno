@@ -7,12 +7,13 @@ Mesa 25.0.7 · freedreno KGSL 后端 · 桌面 GL 4.6 + GLSL 4.60
 
 | 文件 | 说明 | sha256 |
 |---|---|---|
-| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 2 | `99543dbd…6933a` |
+| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 3 | `e89ed851…46229` |
 | `release-25.0.7-a730-egl/libEGL_mesa_gl.so` | 自编 libEGL（droid 平台 + KGSL 钩子），SONAME `libEGL_mesa_gl.so` | `120ffb90…7cfb` |
 | `release-25.0.7-a730-egl/libgallium_dri.so` | freedreno Gallium 驱动 | `07bd302b…d8ca` |
 
-APK 内另含 `libEGL_freedreno.so`：插件入口 shim，导出 `eglGetProcAddress`
-（以及 `glXGetProcAddress[ARB]`），再转给真正的 libEGL。
+APK 内另含 `libEGL_freedreno.so`：插件入口 shim，导出**完整 EGL ABI**
+（55 个入口，含 `eglGetDisplay` / `eglCreatePlatformWindowSurface` 等）以及
+`glXGetProcAddress[ARB]`，全部转发给真正的 libEGL。
 
 完整 sha256 见 `release-25.0.7-a730-egl/SHA256SUMS`。
 
@@ -59,10 +60,13 @@ debug keystore。
 
 ## 5. Minecraft 版本支持
 
-- **26.2 及以下**：正常（元数据 `maxMCVer=26.2`）。
-- **26.3 起**：游戏强制 Vulkan，OpenGL/EGL 路径不再适用，请改用 Zink 等
-  Vulkan 渲染器。FCL 只把 `minMCVer/maxMCVer` 当元数据保存，不会自动拦截，
-  需要手动选择渲染器。
+- **26.2 及以下**：正常。
+- **26.3**：也走 OpenGL。MC 26.3 的渲染后端会先尝试 OpenGL，失败时**静默回退
+  Vulkan**（日志表现为 `Using graphics backend Vulkan`）。早期插件在 26.3 上失败
+  的原因不是“26.3 强制 Vulkan”，而是 shim 当时只导出了 `eglGetProcAddress`；
+  26.3 / LWJGL 3.4.1 / SDL 会直接 `dlsym` `eglGetDisplay` 等常规入口，于是报
+  `Could not retrieve EGL function eglGetDisplay` 后回退 Vulkan。现在 shim 导出
+  完整 EGL ABI（55 个入口），26.3 可以正常选 OpenGL。
 
 ## 6. 关键技术点（都在 patches/egl/ 里）
 
@@ -84,6 +88,12 @@ debug keystore。
    `dri2_load_driver` + `dri2_create_screen`，并让 pipe_loader 回退到
    `"kgsl"` 描述符。
 5. **Android 上开放桌面 GL**：`eglcurrent.h` 去掉 `!DETECT_OS_ANDROID` 限制。
+6. **插件 shim 导出完整 EGL ABI**（`tools/egl_bridge_shim.c`）：除
+   `eglGetProcAddress` / `glXGetProcAddress[ARB]` 外，还导出 55 个 EGL 1.0–1.5 核心
+   与常用 EXT/KHR 入口（`eglGetDisplay`、`eglCreatePlatformWindowSurface`、
+   `eglSwapBuffersWithDamageKHR` 等），全部转发给真正的 libEGL。新版本游戏
+   （MC 26.3 / LWJGL 3.4.1 / SDL）会直接 `dlsym` 这些符号，缺一个就会判定
+   “OpenGL is not supported”并回退 Vulkan。
 
 调试时可参考 `tools/gltest/`：纯 native 的 NativeActivity 复现 APK
 （不需要 Java/dex），把 stderr 重定向到 App 私有目录，用

@@ -11,7 +11,7 @@
 
 完整 sha256 见 `release-25.0.7-a730/SHA256SUMS`。
 
-> **Minecraft 版本**：26.3 起游戏强制 Vulkan，OpenGL 路径（本插件）不再适用，请改用 Zink 等 Vulkan 渲染器；26.2 及以下正常（元数据 `maxMCVer=26.2`）。
+> **Minecraft 版本**：26.2 及以下正常；26.3 走 OpenGL 时需要插件导出完整 EGL ABI（见 `README-FREEDRENO-EGL.md` 第 5/6 节），本 OSMesa 插件是 FCL 的 `gallium_freedreno` 路径，不经过 EGL 加载器，26.3 同样可用。
 >
 > **签名**：插件已改用个人代码签名（CN=lincinyshan），与早期 debug 签名不兼容，升级需先卸载旧版（`adb uninstall com.a730.mesa.osmesa`）。
 
