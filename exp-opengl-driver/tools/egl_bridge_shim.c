@@ -76,6 +76,13 @@ load_real(void)
 
    self_dir();
 
+   /* Mesa 26.3 的产物会 NEEDED libdrm.so；插件目录不在 app 的 linker
+    * namespace 搜索路径里，所以必须先按绝对路径把它的 soname 注册进来，
+    * 否则 libgallium_dri.so 会因为 "libdrm.so not found" 加载失败。 */
+   snprintf(path, sizeof(path), "%s/libdrm.so", g_dir);
+   if (!dlopen(path, RTLD_GLOBAL | RTLD_LAZY))
+      fprintf(stderr, "[fcl-egl] preload %s failed: %s\n", path, dlerror());
+
    snprintf(path, sizeof(path), "%s/libgallium_dri.so", g_dir);
    if (!dlopen(path, RTLD_GLOBAL | RTLD_LAZY))
       fprintf(stderr, "[fcl-egl] preload %s failed: %s\n", path, dlerror());

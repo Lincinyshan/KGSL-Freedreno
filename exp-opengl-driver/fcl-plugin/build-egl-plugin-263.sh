@@ -21,6 +21,9 @@ cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
 
 rm -rf "$out"; mkdir -p "$out/apk/lib/arm64-v8a"
 cp "$libdir/libEGL_mesa_gl.so" "$libdir/libgallium_dri.so" "$out/apk/lib/arm64-v8a/"
+# Mesa 26.3 的产物会 NEEDED libdrm.so，而 app 的 linker namespace 里没有它，
+# 有就一起打包（从设备的 /system/lib64 拉下来的那份）。
+[ -f "$libdir/libdrm.so" ] && cp "$libdir/libdrm.so" "$out/apk/lib/arm64-v8a/"
 "$cc" -O2 -shared -fPIC -Wl,-soname,libEGL_freedreno.so -Wl,-z,lazy -Wl,-z,max-page-size=16384 \
     -o "$out/apk/lib/arm64-v8a/libEGL_freedreno.so" "$script_dir/../tools/egl_bridge_shim.c" -ldl
 
