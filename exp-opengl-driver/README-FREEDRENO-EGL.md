@@ -10,7 +10,7 @@ Mesa 25.0.7 · freedreno KGSL 后端 · 桌面 GL 4.6 + GLSL 4.60
 
 | 文件 | 说明 | sha256 |
 |---|---|---|
-| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 4 | `6e244589…e077c` |
+| `release-25.0.7-a730-egl/MesaFreedrenoEGL-A730-25.0.7.apk` | FCL 渲染器插件，versionCode 5 | `1be0b1eb…84d28` |
 | `release-25.0.7-a730-egl/libEGL_mesa_gl.so` | 自编 libEGL（droid 平台 + KGSL 钩子），SONAME `libEGL_mesa_gl.so` | `120ffb90…7cfb` |
 | `release-25.0.7-a730-egl/libgallium_dri.so` | freedreno Gallium 驱动 | `07bd302b…d8ca` |
 

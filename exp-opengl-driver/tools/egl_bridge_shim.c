@@ -91,6 +91,20 @@ load_real(void)
       fprintf(stderr, "[fcl-egl] no eglGetProcAddress in %s\n", path);
 }
 
+/* 加载探针：只要 dlopen 成功，构造器就会跑；加载失败则这一行不会出现。
+ * 同时顺手把真 libEGL 拉起来，失败原因也会打在 stderr 里。 */
+__attribute__((constructor)) static void
+fcl_shim_ctor(void)
+{
+   self_dir();
+   fprintf(stderr, "[fcl-egl] shim loaded (ctor) dir=%s\n", g_dir);
+   fflush(stderr);
+   load_real();
+   fprintf(stderr, "[fcl-egl] ctor: real=%p getproc=%p dlerror=%s\n",
+           g_real_egl, (void *)g_real_getproc, dlerror());
+   fflush(stderr);
+}
+
 /* 真库里的符号：先 dlsym，再退回 eglGetProcAddress */
 static void *
 real_sym(const char *name)
