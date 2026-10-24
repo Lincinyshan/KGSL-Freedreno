@@ -744,6 +744,7 @@ int ubwc_selftest_feedback(void *egl, void *getproc)
    ubwc_selftest_feedback_mode(egl, getproc, 512, 0);
    ubwc_selftest_feedback_mode(egl, getproc, 512, 1);
    ubwc_selftest_feedback_mode(egl, getproc, 512, 2);
+   ubwc_selftest_feedback_mode(egl, getproc, 512, 3);
    ubwc_selftest_feedback_mode(egl, getproc, 64, 0);
    return 0;
 }
@@ -821,6 +822,12 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
       gl.Clear(GL_COLOR_BUFFER_BIT);
       gl.Disable(GL_SCISSOR_TEST);
       gl.Finish();
+      if (mode >= 3) {
+         /* 把 src 从 FBO 上摘下来，再当纹理采样（排除“挂在 FBO 上”的边界情况） */
+         gl.BindFramebuffer(GL_FRAMEBUFFER, srcFb);
+         gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+         gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+      }
       if (mode >= 1)
          gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
       if (mode >= 2)
@@ -856,6 +863,75 @@ int ubwc_selftest_feedback_mode(void *egl, void *getproc, int S, int mode)
    BindVertexArray(0);
    LOGI("UBWC-FB(%d,mode=%d): RESULT %s (failures=%d/40 first=%d)", S, mode, failures ? "FAIL" : "PASS",
         failures, first);
+   return failures ? 1 : 0;
+}
+
+
+/* T12：区分「两次全屏 clear」「全屏 clear + scissor 局部 clear」，
+ * 都用 blit 读回（不涉及采样反馈）。 */
+int ubwc_selftest_clears(void *egl, void *getproc)
+{
+   (void)egl; (void)getproc;
+   const int S = 512, L = 64;
+   GLuint rt = 0, rtFb = 0, lin = 0, linFb = 0;
+   rt = make_rt((int *)&rtFb);
+   gl.GenTextures(1, &lin);
+   gl.BindTexture(GL_TEXTURE_2D, lin);
+   gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, L, L, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.GenFramebuffers(1, &linFb);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, linFb);
+   gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lin, 0);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+   unsigned char px[4];
+   int failures = 0;
+
+   /* A: 两次全屏 clear */
+   gl.BindFramebuffer(GL_FRAMEBUFFER, rtFb);
+   gl.ClearColor(1, 0, 0, 1); gl.Clear(GL_COLOR_BUFFER_BIT);
+   gl.ClearColor(0, 1, 0, 1); gl.Clear(GL_COLOR_BUFFER_BIT);
+   gl.Finish();
+   gl.BindFramebuffer(GL_READ_FRAMEBUFFER, rtFb);
+   gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, linFb);
+   gl.BlitFramebuffer(200, 200, 264, 264, 0, 0, L, L, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+   gl.Finish();
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   read_px((int)linFb, L / 2, L / 2, px);
+   if (!eq4(px, 0, 255, 0, 255)) { failures++; LOGI("UBWC-CL: A(two clear) got %u,%u,%u want 0,255,0", px[0], px[1], px[2]); }
+
+   /* B: 全屏红 + scissor 绿块 */
+   gl.BindFramebuffer(GL_FRAMEBUFFER, rtFb);
+   gl.Enable(GL_SCISSOR_TEST);
+   gl.Scissor(0, 0, S, S);
+   gl.ClearColor(1, 0, 0, 1); gl.Clear(GL_COLOR_BUFFER_BIT);
+   gl.Scissor(192, 192, 128, 128);
+   gl.ClearColor(0, 1, 0, 1); gl.Clear(GL_COLOR_BUFFER_BIT);
+   gl.Disable(GL_SCISSOR_TEST);
+   gl.Finish();
+   gl.BindFramebuffer(GL_READ_FRAMEBUFFER, rtFb);
+   gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, linFb);
+   gl.BlitFramebuffer(200, 200, 264, 264, 0, 0, L, L, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+   gl.Finish();
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   read_px((int)linFb, L / 2, L / 2, px);
+   if (!eq4(px, 0, 255, 0, 255)) { failures++; LOGI("UBWC-CL: B(full+scissor) got %u,%u,%u want 0,255,0", px[0], px[1], px[2]); }
+
+   /* 再读块外，应为红 */
+   gl.BindFramebuffer(GL_READ_FRAMEBUFFER, rtFb);
+   gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, linFb);
+   gl.BlitFramebuffer(8, 8, 72, 72, 0, 0, L, L, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+   gl.Finish();
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   read_px((int)linFb, L / 2, L / 2, px);
+   if (!eq4(px, 255, 0, 0, 255)) { failures++; LOGI("UBWC-CL: B-outside got %u,%u,%u want 255,0,0", px[0], px[1], px[2]); }
+
+   gl.DeleteFramebuffers(1, &rtFb);
+   gl.DeleteFramebuffers(1, &linFb);
+   gl.DeleteTextures(1, &rt);
+   gl.DeleteTextures(1, &lin);
+   LOGI("UBWC-CL: RESULT %s (failures=%d/3)", failures ? "FAIL" : "PASS", failures);
    return failures ? 1 : 0;
 }
 
@@ -987,6 +1063,8 @@ int ubwc_selftest(void *egl, void *getproc)
       ubwc_selftest_sample(egl, getproc);
       extern int ubwc_selftest_feedback(void *, void *);
       ubwc_selftest_feedback(egl, getproc);
+      extern int ubwc_selftest_clears(void *, void *);
+      ubwc_selftest_clears(egl, getproc);
    }
    return failures ? 1 : 0;
 }
