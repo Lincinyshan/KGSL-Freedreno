@@ -9,3 +9,5 @@ dri2_frontend.c      src/gallium/frontends/dri/dri2.c
 freedreno_screen.c   src/gallium/drivers/freedreno/freedreno_screen.c
 freedreno_device.c   src/freedreno/drm/freedreno_device.c
 drm_meson.build      src/freedreno/drm/meson.build
+freedreno_resource.c src/gallium/drivers/freedreno/freedreno_resource.c
+fd6_resource.cc      src/gallium/drivers/freedreno/a6xx/fd6_resource.cc

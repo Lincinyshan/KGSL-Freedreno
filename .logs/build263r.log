@@ -1,0 +1,8 @@
+[1/22] Compiling C object src/gallium/drivers/freedreno/libfreedreno.a.p/freedreno_resource.c.o
+[2/22] Generating src/git_sha1.h with a custom command
+[3/8] Compiling C++ object src/gallium/drivers/freedreno/libfreedreno.a.p/a6xx_fd6_resource.cc.o
+[4/8] Linking static target src/gallium/drivers/freedreno/libfreedreno.a
+[5/8] Linking target src/gallium/targets/dri/libgallium_dri.so
+[6/8] Generating symbol file src/gallium/targets/dri/libgallium_dri.so.p/libgallium_dri.so.symbols
+[7/8] Linking target src/mesa/glapi/es2api/libGLESv2.so
+[8/8] Linking target src/egl/libEGL.so

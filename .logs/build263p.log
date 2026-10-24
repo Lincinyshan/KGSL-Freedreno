@@ -1,0 +1,7 @@
+[1/21] Generating src/git_sha1.h with a custom command
+[2/7] Compiling C object src/gallium/drivers/freedreno/libfreedreno.a.p/freedreno_resource.c.o
+[3/7] Linking static target src/gallium/drivers/freedreno/libfreedreno.a
+[4/7] Linking target src/gallium/targets/dri/libgallium_dri.so
+[5/7] Generating symbol file src/gallium/targets/dri/libgallium_dri.so.p/libgallium_dri.so.symbols
+[6/7] Linking target src/mesa/glapi/es2api/libGLESv2.so
+[7/7] Linking target src/egl/libEGL.so
