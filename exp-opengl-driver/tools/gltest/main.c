@@ -60,6 +60,7 @@ static void run_test(ANativeWindow *win) {
    /* 与 MC 的环境一致：freedreno 自身声明的桌面 GL 版本低于 4.6，
     * MC 是通过 MESA_GL_VERSION_OVERRIDE=4.6 才拿到 4.6 core 的。 */
    setenv("MESA_GL_VERSION_OVERRIDE", "4.6", 0);
+   setenv("FCL_TEXDBG", "1", 0);
    setenv("MESA_GLSL_VERSION_OVERRIDE", "460", 0);
    setenv("allow_higher_compat_version", "true", 0);
    int32_t w = 0, h = 0, fmt = 0, minund = -1;
