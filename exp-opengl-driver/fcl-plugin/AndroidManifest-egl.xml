@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.a730.mesa.egl"
-    android:versionCode="6"
-    android:versionName="25.0.7-egl-r6">
+    android:versionCode="7"
+    android:versionName="25.0.7-egl-r7">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -29,7 +29,7 @@
         <meta-data android:name="des" android:value="Mesa 25.0.7 freedreno/KGSL, EGL + 桌面 GL 4.6, ANativeWindow 零拷贝直出" />
         <meta-data android:name="renderer" android:value="Freedreno-EGL:libEGL_freedreno.so:libEGL_freedreno.so" />
         <meta-data android:name="boatEnv" android:value="" />
-        <meta-data android:name="pojavEnv" android:value="POJAV_RENDERER=opengles3_desktopgl_freedreno:LIBGL_ES=3:MESA_GL_VERSION_OVERRIDE=4.6:MESA_GLSL_VERSION_OVERRIDE=460:allow_higher_compat_version=true:force_glsl_extensions_warn=true:LIBGL_DEBUG=verbose" />
+        <meta-data android:name="pojavEnv" android:value="POJAV_RENDERER=opengles3_desktopgl_freedreno:LIBGL_ES=3:MESA_GL_VERSION_OVERRIDE=4.6:MESA_GLSL_VERSION_OVERRIDE=460:allow_higher_compat_version=true:force_glsl_extensions_warn=true:FD_MESA_DEBUG=noubwc" />
         <!-- 26.3 也能用 OpenGL（游戏在 OpenGL 不可用时才回退 Vulkan） -->
         <meta-data android:name="minMCVer" android:value="" />
         <meta-data android:name="maxMCVer" android:value="" />

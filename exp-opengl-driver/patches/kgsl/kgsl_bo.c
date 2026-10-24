@@ -207,12 +207,24 @@ kgsl_bo_new(struct fd_device *dev, uint32_t size, uint32_t flags)
 
     bo = kgsl_bo_from_handle(dev, size, req.id);
 
-    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
-    kgsl_bo->bo_type = KGSL_BO_NATIVE;
-
     if (!bo) {
         ERROR_MSG("Failed to allocate buffer object");
         return NULL;
+    }
+
+    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
+    kgsl_bo->bo_type = KGSL_BO_NATIVE;
+
+    /* 追踪大 BO 的 GPU 地址范围，便于和 dmesg 里的 PAGE FAULT 对照 */
+    if (size >= 65536) {
+        static int dbg;
+        if (dbg < 24) {
+            fprintf(stderr,
+                    "[kgsl] new size=%u iova=0x%llx end=0x%llx flags=0x%x\n",
+                    size, (unsigned long long)kgsl_bo->iova,
+                    (unsigned long long)(kgsl_bo->iova + bo->size), flags);
+            dbg++;
+        }
     }
 
     return bo;
