@@ -35,8 +35,9 @@ kgsl_device_new(int fd)
 
     dev->bo_size = sizeof(struct kgsl_bo);
 
-    /* KGSL 无隐式同步：BO 不能一释放就进 cache 复用（见 try_recycle） */
-    dev->no_recycle = true;
+    /* KGSL 无隐式同步：BO 不能一释放就进 cache 复用（见 try_recycle）。
+     * A/B 开关：FCL_BO_CACHE=1 恢复旧行为（释放即入 cache、立即复用）。 */
+    dev->no_recycle = getenv("FCL_BO_CACHE") == NULL;
 
     return dev;
 }

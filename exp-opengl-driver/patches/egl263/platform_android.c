@@ -28,6 +28,8 @@
  */
 
 #include <dirent.h>
+#include "GL/gl.h"
+#include "GL/glext.h"
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -69,6 +71,166 @@ fcl_anw_perform(struct ANativeWindow *window, int op, int arg)
 #define FCL_NATIVE_WINDOW_API_CONNECT 13
 #define FCL_NATIVE_WINDOW_API_DISCONNECT 14
 #define FCL_NATIVE_WINDOW_API_EGL 1
+
+/* ------------------------------------------------------------------
+ * FCL 运行时 UBWC 自校验
+ *
+ * 每 N 帧（FCL_UBWC_SELFTEST=N，N>0 启用）在 swap 时用应用自己的 GL 上下文
+ * 跑一次极小往返：UBWC FBO 清屏+scissor 清块 -> blit 到线性 RT -> 读回比对。
+ * 目的：在 MC 长时间运行中，定位"驱动的 UBWC 正确性从第几帧开始崩"，
+ * 与花屏出现的时间点对齐。
+ * GL 入口通过 __DRIcoreExtension::getProcAddress 取（EGL 层原本不持 GL 符号）。
+ * ------------------------------------------------------------------ */
+struct fcl_ubwc_test {
+   bool inited;
+   GLuint tex;       /* UBWC 候选 RT */
+   GLuint fbo;
+   GLuint tex2;      /* 第二个 UBWC RT：做 UBWC->UBWC 往返 */
+   GLuint fbo2;
+   GLuint lin_tex;   /* 线性 RT（小尺寸，不走 UBWC） */
+   GLuint lin_fbo;
+   unsigned frame;
+   unsigned fail;
+   unsigned first_fail;
+};
+
+static void
+fcl_ubwc_selftest(struct dri2_egl_display *dri2_dpy, struct fcl_ubwc_test *t)
+{
+   static PFNGLGENTEXTURESPROC pGenTex;
+   static PFNGLBINDTEXTUREPROC pBindTex;
+   static PFNGLTEXIMAGE2DPROC pTexImage2D;
+   static PFNGLTEXPARAMETERIPROC pTexParam;
+   static PFNGLGENFRAMEBUFFERSPROC pGenFbo;
+   static PFNGLBINDFRAMEBUFFERPROC pBindFbo;
+   static PFNGLFRAMEBUFFERTEXTURE2DPROC pFboTex;
+   static PFNGLCHECKFRAMEBUFFERSTATUSPROC pFboStatus;
+   static PFNGLCLEARCOLORPROC pClearColor;
+   static PFNGLCLEARPROC pClear;
+   static PFNGLSCISSORPROC pScissor;
+   static PFNGLENABLEPROC pEnable;
+   static PFNGLDISABLEPROC pDisable;
+   static PFNGLREADPIXELSPROC pReadPixels;
+   static PFNGLPIXELSTOREIPROC pPixelStore;
+   static PFNGLFINISHPROC pFinish;
+   static PFNGLBLITFRAMEBUFFERPROC pBlit;
+   static bool resolved;
+
+   if (!resolved) {
+      resolved = true;
+      pGenTex = (PFNGLGENTEXTURESPROC)eglGetProcAddress("glGenTextures");
+      pBindTex = (PFNGLBINDTEXTUREPROC)eglGetProcAddress("glBindTexture");
+      pTexImage2D = (PFNGLTEXIMAGE2DPROC)eglGetProcAddress("glTexImage2D");
+      pTexParam = (PFNGLTEXPARAMETERIPROC)eglGetProcAddress("glTexParameteri");
+      pGenFbo = (PFNGLGENFRAMEBUFFERSPROC)eglGetProcAddress("glGenFramebuffers");
+      pBindFbo = (PFNGLBINDFRAMEBUFFERPROC)eglGetProcAddress("glBindFramebuffer");
+      pFboTex = (PFNGLFRAMEBUFFERTEXTURE2DPROC)eglGetProcAddress("glFramebufferTexture2D");
+      pFboStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)eglGetProcAddress("glCheckFramebufferStatus");
+      pClearColor = (PFNGLCLEARCOLORPROC)eglGetProcAddress("glClearColor");
+      pClear = (PFNGLCLEARPROC)eglGetProcAddress("glClear");
+      pScissor = (PFNGLSCISSORPROC)eglGetProcAddress("glScissor");
+      pEnable = (PFNGLENABLEPROC)eglGetProcAddress("glEnable");
+      pDisable = (PFNGLDISABLEPROC)eglGetProcAddress("glDisable");
+      pReadPixels = (PFNGLREADPIXELSPROC)eglGetProcAddress("glReadPixels");
+      pPixelStore = (PFNGLPIXELSTOREIPROC)eglGetProcAddress("glPixelStorei");
+      pFinish = (PFNGLFINISHPROC)eglGetProcAddress("glFinish");
+      pBlit = (PFNGLBLITFRAMEBUFFERPROC)eglGetProcAddress("glBlitFramebuffer");
+   }
+   if (!pGenTex || !pBlit || !pReadPixels || !pGenFbo)
+      return;
+
+   const int S = 256, L = 64; /* 256 走 UBWC，64 为线性对照 */
+
+   if (!t->inited) {
+      t->inited = true;
+      pGenTex(1, &t->tex);
+      pBindTex(GL_TEXTURE_2D, t->tex);
+      pTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, S, S, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      pGenFbo(1, &t->fbo);
+      pBindFbo(GL_FRAMEBUFFER, t->fbo);
+      pFboTex(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t->tex, 0);
+      {
+         GLenum st = pFboStatus ? pFboStatus(GL_FRAMEBUFFER) : 0;
+         if (st != GL_FRAMEBUFFER_COMPLETE)
+            fprintf(stderr, "[fcl-ubwc] selftest ubwc FBO status=0x%x\n", st);
+      }
+
+      pGenTex(1, &t->tex2);
+      pBindTex(GL_TEXTURE_2D, t->tex2);
+      pTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, S, S, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      pGenFbo(1, &t->fbo2);
+      pBindFbo(GL_FRAMEBUFFER, t->fbo2);
+      pFboTex(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t->tex2, 0);
+      pBindFbo(GL_FRAMEBUFFER, 0);
+
+      pGenTex(1, &t->lin_tex);
+      pBindTex(GL_TEXTURE_2D, t->lin_tex);
+      pTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, L, L, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      pTexParam(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      pGenFbo(1, &t->lin_fbo);
+      pBindFbo(GL_FRAMEBUFFER, t->lin_fbo);
+      pFboTex(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t->lin_tex, 0);
+      {
+         GLenum st2 = pFboStatus ? pFboStatus(GL_FRAMEBUFFER) : 0;
+         if (st2 != GL_FRAMEBUFFER_COMPLETE)
+            fprintf(stderr, "[fcl-ubwc] selftest linear FBO status=0x%x\n", st2);
+      }
+      pBindFbo(GL_FRAMEBUFFER, 0);
+      pBindTex(GL_TEXTURE_2D, 0);
+      fprintf(stderr, "[fcl-ubwc] selftest resources ready (%dx%d ubwc / %dx%d linear)\n",
+              S, S, L, L);
+   }
+
+   /* 清红 + scissor 清绿块 */
+   pBindFbo(GL_FRAMEBUFFER, t->fbo);
+   pEnable(GL_SCISSOR_TEST);
+   pScissor(0, 0, S, S);
+   pClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+   pClear(GL_COLOR_BUFFER_BIT);
+   pScissor(32, 32, 64, 64);
+   pClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+   pClear(GL_COLOR_BUFFER_BIT);
+   pDisable(GL_SCISSOR_TEST);
+
+   /* 先做一次 UBWC -> UBWC 的拷贝（编码往返，模拟 MC 的合成） */
+   pBindFbo(GL_READ_FRAMEBUFFER, t->fbo);
+   pBindFbo(GL_DRAW_FRAMEBUFFER, t->fbo2);
+   pBlit(0, 0, S, S, 0, 0, S, S, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+   /* 再从第二个 UBWC RT 解码到线性 RT（解码 + 写入） */
+   pBindFbo(GL_READ_FRAMEBUFFER, t->fbo2);
+   pBindFbo(GL_DRAW_FRAMEBUFFER, t->lin_fbo);
+   pBlit(32, 32, 96, 96, 0, 0, L, L, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+   pFinish();
+   pBindFbo(GL_FRAMEBUFFER, 0);
+
+   unsigned char px[4];
+   pBindFbo(GL_FRAMEBUFFER, t->lin_fbo);
+   pPixelStore(GL_PACK_ALIGNMENT, 1);
+   pReadPixels(L / 2, L / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+   pBindFbo(GL_FRAMEBUFFER, 0);
+
+   t->frame++;
+   bool ok = (px[0] < 8 && px[1] > 247 && px[2] < 8);
+   if (!ok) {
+      t->fail++;
+      if (!t->first_fail) {
+         t->first_fail = t->frame;
+         fprintf(stderr,
+                 "[fcl-ubwc] selftest FAIL at frame %u: got %u,%u,%u want 0,255,0\n",
+                 t->frame, px[0], px[1], px[2]);
+         fflush(stderr);
+      }
+   } else if ((t->frame % 30) == 0) {
+      fprintf(stderr, "[fcl-ubwc] selftest frame %u ok (fails=%u)\n", t->frame, t->fail);
+      fflush(stderr);
+   }
+}
 
 static struct dri_image *
 droid_create_image_from_buffer_info(
@@ -687,6 +849,21 @@ droid_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw,
    if (dri2_surf->back)
       dri2_surf->back->age = 1;
 
+   /* FCL: 运行时 UBWC 自校验（FCL_UBWC_SELFTEST=N，每 N 帧一次） */
+   {
+      static struct fcl_ubwc_test ubwc_test;
+      static int selftest_n = -1;
+      static unsigned frame_no;
+      if (selftest_n < 0) {
+         const char *e = getenv("FCL_UBWC_SELFTEST");
+         selftest_n = (e && e[0]) ? atoi(e) : 0;
+         if (selftest_n > 0)
+            fprintf(stderr, "[fcl-ubwc] runtime selftest enabled, every %d frames\n", selftest_n);
+      }
+      if (selftest_n > 0 && (frame_no++ % (unsigned)selftest_n) == 0)
+         fcl_ubwc_selftest(dri2_dpy, &ubwc_test);
+   }
+
    dri2_flush_drawable_for_swapbuffers_flags(disp, draw,
                                              __DRI2_NOTHROTTLE_SWAPBUFFER);
 
@@ -1219,9 +1396,55 @@ droid_open_device(_EGLDisplay *disp, bool swrast)
    return EGL_TRUE;
 }
 
+/* FCL A/B：/storage/emulated/0/FCL/fcl_ab.txt 每行一个 KEY=VALUE，
+ * 在建 screen 之前 setenv 生效 —— 换调试开关不用重装插件，改文件即可。
+ * 例：
+ *   FD_MESA_DEBUG=nolrz
+ *   FCL_BO_CACHE=1
+ */
+static void
+fcl_load_ab_config(void)
+{
+   static bool loaded;
+   const char *paths[] = {
+      "/storage/emulated/0/FCL/fcl_ab.txt",
+      "/sdcard/FCL/fcl_ab.txt",
+   };
+   FILE *fp = NULL;
+   char line[256];
+
+   if (loaded)
+      return;
+   loaded = true;
+
+   for (unsigned i = 0; i < ARRAY_SIZE(paths) && !fp; i++)
+      fp = fopen(paths[i], "r");
+   if (!fp)
+      return;
+
+   while (fgets(line, sizeof(line), fp)) {
+      char *eq, *nl;
+
+      nl = strchr(line, '\n');
+      if (nl)
+         *nl = '\0';
+      if (line[0] == '#' || line[0] == '\0')
+         continue;
+      eq = strchr(line, '=');
+      if (!eq)
+         continue;
+      *eq = '\0';
+      setenv(line, eq + 1, 1);
+      fprintf(stderr, "[fcl-ab] %s=%s\n", line, eq + 1);
+   }
+   fclose(fp);
+}
+
 EGLBoolean
 dri2_initialize_android(_EGLDisplay *disp)
 {
+   fcl_load_ab_config();
+
    bool device_opened = false;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const char *err;
