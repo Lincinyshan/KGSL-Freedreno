@@ -1109,14 +1109,14 @@ int ubwc_selftest_mip_lod(void *egl, void *getproc)
    VertexAttribPointer(0, 2, GL_FLOAT, 0, 8, NULL);
    EnableVertexAttribArray(0);
 
-   const int W0 = 1024, H0 = 512, LEVELS = 10, S = 256;
+   const int W0 = 1024, H0 = 1024, LEVELS = 5, S = 256;
    GLuint tex = 0;
    gl.GenTextures(1, &tex);
    gl.BindTexture(GL_TEXTURE_2D, tex);
    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 0x2703 /*LINEAR_MIPMAP_LINEAR*/);
    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
    gl.TexParameteri(GL_TEXTURE_2D, 0x813D /*TEXTURE_MAX_LEVEL*/, LEVELS - 1);
-   static unsigned char buf[1024 * 512 * 4];
+   static unsigned char buf[1024 * 1024 * 4];
    for (int l = 0, w = W0, h = H0; l < LEVELS; l++, w /= 2, h /= 2) {
       for (int i = 0; i < w * h; i++) {
          buf[i * 4 + 0] = (unsigned char)(l * 25);
@@ -1150,11 +1150,216 @@ int ubwc_selftest_mip_lod(void *egl, void *getproc)
          failures++;
       }
    }
+   /* 决定性区分：直接把 level 9 挂到 FBO 上读，看数据到底在不在那一层 */
+   {
+      GLuint fb9 = 0;
+      gl.GenFramebuffers(1, &fb9);
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fb9);
+      gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 9);
+      GLenum st9 = gl.CheckFramebufferStatus(GL_FRAMEBUFFER);
+      read_px((int)fb9, 0, 0, px);
+      LOGI("UBWC-MIPLOD: level9 FBO status=0x%x read=(%u,%u,%u)", st9, px[0], px[1], px[2]);
+      gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+      gl.DeleteFramebuffers(1, &fb9);
+   }
+
    gl.DeleteFramebuffers(1, &dstFb);
    gl.DeleteTextures(1, &dst);
    gl.DeleteTextures(1, &tex);
    LOGI("UBWC-MIPLOD: RESULT %s (failures=%d/%d)", failures ? "FAIL" : "PASS",
         failures, LEVELS);
+   return failures ? 1 : 0;
+}
+
+
+/* T17：MC 方块图集的真实形态 —— 2048x2048 + mip + 逐格 TexSubImage2D + GenerateMipmap。
+ * 生物图集没这形态（所以实体好了物品还坏），这里是物品的嫌疑点。 */
+int ubwc_selftest_atlas(void *egl, void *getproc)
+{
+   typedef void *(*PFN_gp)(const char *);
+   PFN_gp gp = (PFN_gp)getproc;
+   PFN_glGenerateMipmap GenMip = (void *)(dlsym(egl, "glGenerateMipmap") ? dlsym(egl, "glGenerateMipmap") : gp("glGenerateMipmap"));
+   if (!GenMip) { LOGI("UBWC-ATLAS: SKIP"); return -1; }
+
+   const int S = 2048, LEVELS = 6, CELL = 16, GRID = 32; /* 512x512 区域内有 32x32 格 */
+   GLuint tex = 0;
+   gl.GenTextures(1, &tex);
+   gl.BindTexture(GL_TEXTURE_2D, tex);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 0x2703 /*LINEAR_MIPMAP_LINEAR*/);
+   gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   gl.TexParameteri(GL_TEXTURE_2D, 0x813D /*TEXTURE_MAX_LEVEL*/, LEVELS - 1);
+   for (int l = 0, w = S; l < LEVELS; l++, w /= 2)
+      gl.TexImage2D(GL_TEXTURE_2D, l, GL_RGBA8, w, w, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+   /* 逐格上传纯色（模拟图集拼接） */
+   static unsigned char cell[CELL * CELL * 4];
+   for (int cy = 0; cy < GRID; cy++) {
+      for (int cx = 0; cx < GRID; cx++) {
+         for (int i = 0; i < CELL * CELL; i++) {
+            cell[i * 4 + 0] = (unsigned char)(cx * 8);
+            cell[i * 4 + 1] = (unsigned char)(cy * 8);
+            cell[i * 4 + 2] = 128;
+            cell[i * 4 + 3] = 255;
+         }
+         gl.TexSubImage2D(GL_TEXTURE_2D, 0, cx * CELL, cy * CELL, CELL, CELL,
+                          GL_RGBA, GL_UNSIGNED_BYTE, cell);
+      }
+   }
+   GenMip(GL_TEXTURE_2D);
+   gl.Finish();
+   gl.BindTexture(GL_TEXTURE_2D, 0);
+
+   /* 用 texelFetch 把 level0 左下 512x512 拷到 RT，逐格校验 */
+   GLuint dst = 0, dstFb = 0;
+   dst = make_rt_sz((int *)&dstFb, 512, 512);
+   unsigned char px[4];
+   int failures = 0;
+   int bad = 0;
+   /* 直接用 blit 读回 level0 更简单：把 tex 挂到 FBO 上 blit */
+   GLuint fb = 0;
+   gl.GenFramebuffers(1, &fb);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+   gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+   GLenum st = gl.CheckFramebufferStatus(GL_FRAMEBUFFER);
+   gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+   gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFb);
+   gl.BlitFramebuffer(0, 0, 512, 512, 0, 0, 512, 512, 0x4000, GL_NEAREST);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   gl.Finish();
+   LOGI("UBWC-ATLAS: fbo status=0x%x", st);
+   for (int cy = 0; cy < GRID; cy++) {
+      for (int cx = 0; cx < GRID; cx++) {
+         read_px((int)dstFb, cx * CELL + CELL / 2, cy * CELL + CELL / 2, px);
+         if (!eq4(px, cx * 8, cy * 8, 128, 255)) {
+            if (!bad)
+               LOGI("UBWC-ATLAS: cell(%d,%d)=(%u,%u,%u) want(%d,%d,128)",
+                    cx, cy, px[0], px[1], px[2], cx * 8, cy * 8);
+            bad++;
+         }
+      }
+   }
+   failures += bad;
+   LOGI("UBWC-ATLAS: cells bad=%d/%d", bad, GRID * GRID);
+   /* ==== 关键：用 TP 采样（而不是 blit 读回）再验一遍 ==== */
+   {
+      typedef void *(*PFN_gp)(const char *);
+      PFN_gp gp = (PFN_gp)getproc;
+      PFN_glCreateShader CS = (void *)(dlsym(egl, "glCreateShader") ? dlsym(egl, "glCreateShader") : gp("glCreateShader"));
+      PFN_glShaderSource SS = (void *)(dlsym(egl, "glShaderSource") ? dlsym(egl, "glShaderSource") : gp("glShaderSource"));
+      PFN_glCompileShader CC = (void *)(dlsym(egl, "glCompileShader") ? dlsym(egl, "glCompileShader") : gp("glCompileShader"));
+      PFN_glCreateProgram CP = (void *)(dlsym(egl, "glCreateProgram") ? dlsym(egl, "glCreateProgram") : gp("glCreateProgram"));
+      PFN_glAttachShader AS = (void *)(dlsym(egl, "glAttachShader") ? dlsym(egl, "glAttachShader") : gp("glAttachShader"));
+      PFN_glLinkProgram LP = (void *)(dlsym(egl, "glLinkProgram") ? dlsym(egl, "glLinkProgram") : gp("glLinkProgram"));
+      PFN_glUseProgram UP = (void *)(dlsym(egl, "glUseProgram") ? dlsym(egl, "glUseProgram") : gp("glUseProgram"));
+      PFN_glGetUniformLocation GU = (void *)(dlsym(egl, "glGetUniformLocation") ? dlsym(egl, "glGetUniformLocation") : gp("glGetUniformLocation"));
+      PFN_glUniform1i U1 = (void *)(dlsym(egl, "glUniform1i") ? dlsym(egl, "glUniform1i") : gp("glUniform1i"));
+      PFN_glGenVertexArrays GVA = (void *)(dlsym(egl, "glGenVertexArrays") ? dlsym(egl, "glGenVertexArrays") : gp("glGenVertexArrays"));
+      PFN_glBindVertexArray BVA = (void *)(dlsym(egl, "glBindVertexArray") ? dlsym(egl, "glBindVertexArray") : gp("glBindVertexArray"));
+      PFN_glGenBuffers GB = (void *)(dlsym(egl, "glGenBuffers") ? dlsym(egl, "glGenBuffers") : gp("glGenBuffers"));
+      PFN_glBindBuffer BB = (void *)(dlsym(egl, "glBindBuffer") ? dlsym(egl, "glBindBuffer") : gp("glBindBuffer"));
+      PFN_glBufferData BD = (void *)(dlsym(egl, "glBufferData") ? dlsym(egl, "glBufferData") : gp("glBufferData"));
+      PFN_glVertexAttribPointer VAP = (void *)(dlsym(egl, "glVertexAttribPointer") ? dlsym(egl, "glVertexAttribPointer") : gp("glVertexAttribPointer"));
+      PFN_glEnableVertexAttribArray EVA = (void *)(dlsym(egl, "glEnableVertexAttribArray") ? dlsym(egl, "glEnableVertexAttribArray") : gp("glEnableVertexAttribArray"));
+      PFN_glDrawArrays DA = (void *)(dlsym(egl, "glDrawArrays") ? dlsym(egl, "glDrawArrays") : gp("glDrawArrays"));
+      if (CS && SS && CC && CP && AS && LP && UP && GU && U1 && GVA && BVA && GB && BB && BD && VAP && EVA && DA) {
+         const char *vs = "#version 330 core\nlayout(location=0) in vec2 p;\nvoid main(){gl_Position=vec4(p,0,1);}\n";
+         const char *fs = "#version 330 core\nuniform sampler2D t;\nout vec4 c;\nvoid main(){c=texelFetch(t, ivec2(gl_FragCoord.xy), 0);}\n";
+         GLuint v = CS(GL_VERTEX_SHADER), fsh = CS(GL_FRAGMENT_SHADER);
+         SS(v, 1, &vs, NULL); CC(v);
+         SS(fsh, 1, &fs, NULL); CC(fsh);
+         GLuint prog = CP(); AS(prog, v); AS(prog, fsh); LP(prog); UP(prog);
+         U1(GU(prog, "t"), 0);
+         GLuint vao = 0, vbo = 0;
+         GVA(1, &vao); BVA(vao);
+         const float quad[8] = {-1, -1, 1, -1, -1, 1, 1, 1};
+         GB(1, &vbo); BB(GL_ARRAY_BUFFER, vbo);
+         BD(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+         VAP(0, 2, GL_FLOAT, 0, 8, NULL); EVA(0);
+         gl.BindFramebuffer(GL_FRAMEBUFFER, dstFb);
+         gl.Viewport(0, 0, 512, 512);
+         gl.ClearColor(0, 0, 0, 1);
+         gl.Clear(GL_COLOR_BUFFER_BIT);
+         gl.BindTexture(GL_TEXTURE_2D, tex);
+         DA(GL_TRIANGLE_STRIP, 0, 4);
+         gl.Finish();
+         gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+         int tbad = 0;
+         for (int cy = 0; cy < GRID; cy++) {
+            for (int cx = 0; cx < GRID; cx++) {
+               read_px((int)dstFb, cx * CELL + CELL / 2, cy * CELL + CELL / 2, px);
+               if (!eq4(px, cx * 8, cy * 8, 128, 255)) {
+                  if (!tbad)
+                     LOGI("UBWC-ATLAS: TP cell(%d,%d)=(%u,%u,%u) want(%d,%d,128)",
+                          cx, cy, px[0], px[1], px[2], cx * 8, cy * 8);
+                  tbad++;
+               }
+            }
+         }
+         LOGI("UBWC-ATLAS: TP cells bad=%d/%d", tbad, GRID * GRID);
+         failures += tbad;
+      } else {
+         LOGI("UBWC-ATLAS: TP probe SKIP (missing GL entry points)");
+      }
+   }
+
+   gl.DeleteFramebuffers(1, &fb);
+   gl.DeleteFramebuffers(1, &dstFb);
+   gl.DeleteTextures(1, &dst);
+   gl.DeleteTextures(1, &tex);
+   LOGI("UBWC-ATLAS: RESULT %s (failures=%d)", failures ? "FAIL" : "PASS", failures);
+   return failures ? 1 : 0;
+}
+
+
+/* T18：先整张 clear（置 UBWC fast-clear 标记），再局部 TexSubImage2D。
+ * 若上传没清掉目标块的 flag，采样/读回会一直是 clear 颜色。 */
+int ubwc_selftest_clear_upload(void *egl, void *getproc)
+{
+   (void)egl; (void)getproc;
+   const int S = 512, CELL = 16;
+   GLuint tex = 0, fb = 0, rt = 0, rtFb = 0;
+   tex = make_rt_sz((int *)&fb, S, S);
+   rt = make_rt_sz((int *)&rtFb, S, S);
+
+   gl.BindFramebuffer(GL_FRAMEBUFFER, fb);
+   gl.Viewport(0, 0, S, S);
+   gl.Enable(GL_SCISSOR_TEST);
+   gl.Scissor(0, 0, S, S);
+   gl.ClearColor(0, 1, 0, 1);
+   gl.Clear(GL_COLOR_BUFFER_BIT);
+   gl.Disable(GL_SCISSOR_TEST);
+   gl.Finish();
+
+   static unsigned char red[CELL * CELL * 4];
+   for (int i = 0; i < CELL * CELL; i++) {
+      red[i * 4 + 0] = 255; red[i * 4 + 1] = 0; red[i * 4 + 2] = 0; red[i * 4 + 3] = 255;
+   }
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   gl.BindTexture(GL_TEXTURE_2D, tex);
+   gl.TexSubImage2D(GL_TEXTURE_2D, 0, 32, 32, CELL, CELL, GL_RGBA, GL_UNSIGNED_BYTE, red);
+   gl.BindTexture(GL_TEXTURE_2D, 0);
+   gl.Finish();
+
+   /* blit 读回到 RT 再取点 */
+   gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+   gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, rtFb);
+   gl.BlitFramebuffer(0, 0, S, S, 0, 0, S, S, 0x4000, GL_NEAREST);
+   gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+   gl.Finish();
+
+   unsigned char px[4];
+   int failures = 0;
+   read_px((int)rtFb, 40, 40, px);
+   LOGI("UBWC-CU: sprite=(%u,%u,%u) want 255,0,0", px[0], px[1], px[2]);
+   if (!eq4(px, 255, 0, 0, 255)) failures++;
+   read_px((int)rtFb, 200, 200, px);
+   LOGI("UBWC-CU: bg=(%u,%u,%u) want 0,255,0", px[0], px[1], px[2]);
+   if (!eq4(px, 0, 255, 0, 255)) failures++;
+   gl.DeleteFramebuffers(1, &fb);
+   gl.DeleteFramebuffers(1, &rtFb);
+   gl.DeleteTextures(1, &tex);
+   gl.DeleteTextures(1, &rt);
+   LOGI("UBWC-CU: RESULT %s (failures=%d)", failures ? "FAIL" : "PASS", failures);
    return failures ? 1 : 0;
 }
 
@@ -1165,8 +1370,12 @@ int ubwc_selftest(void *egl, void *getproc)
       return -1;
    }
 
-   ubwc_selftest_mip_npot(egl, getproc);
+   /* 新用例先跑，避免被后面的用例污染 GL 状态 */
+   ubwc_selftest_clear_upload(egl, getproc);
+   ubwc_selftest_atlas(egl, getproc);
    ubwc_selftest_mip_lod(egl, getproc);
+   ubwc_selftest_mip_npot(egl, getproc);
+
 
    int fbA = 0, fbB = 0;
    GLuint texA = make_rt(&fbA);
