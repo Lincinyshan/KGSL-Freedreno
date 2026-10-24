@@ -723,6 +723,20 @@ droid_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
    dri2_flush_drawable_for_swapbuffers_flags(disp, draw,
                                              __DRI2_NOTHROTTLE_SWAPBUFFER);
 
+   /* FCL: Mesa only generates the out fence in the generic (X11/Wayland) swap
+    * path; on Android the buffer must carry a fence or the consumer can sample
+    * a half-rendered buffer (visible tearing). */
+   {
+      _EGLContext *fsctx = _eglGetCurrentContext();
+      if (fsctx)
+         dri2_surf_update_fence_fd(fsctx, disp, draw);
+      static int dbg_fence;
+      if (dbg_fence < 3) {
+         _eglLog(_EGL_WARNING, "FCL swap fence_fd=%d", dri2_surf->out_fence_fd);
+         dbg_fence++;
+      }
+   }
+
    if (dri2_dpy->pure_swrast) {
       driSwapBuffers(dri2_surf->dri_drawable);
       if (dri2_surf->buffer)

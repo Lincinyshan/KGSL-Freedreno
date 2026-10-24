@@ -172,6 +172,17 @@ kgsl_bo_from_dmabuf(struct fd_device *dev, int fd)
     kgsl_bo->bo_type = KGSL_BO_IMPORT;
     kgsl_bo->import_fd = fd;
 
+    {
+        static int dbg;
+        if (dbg < 8) {
+            fprintf(stderr,
+                    "[kgsl] import fd=%d iova=0x%llx size=%u (end=0x%llx)\n",
+                    fd, (unsigned long long)kgsl_bo->iova, bo->size,
+                    (unsigned long long)(kgsl_bo->iova + bo->size));
+            dbg++;
+        }
+    }
+
     return bo;
 }
 

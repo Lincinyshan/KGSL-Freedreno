@@ -22,3 +22,7 @@
 .DS_Store
 /.shot-*.png
 /.screenshot-tmp*.png
+
+# 构建中间产物（可重建）
+/exp-opengl-driver/fcl-plugin/out-egl/
+/exp-opengl-driver/tools/gltest/out/

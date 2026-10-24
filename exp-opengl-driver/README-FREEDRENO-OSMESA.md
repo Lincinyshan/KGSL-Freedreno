@@ -6,10 +6,14 @@
 
 | 文件 | 说明 | sha256 |
 |---|---|---|
-| `release-25.0.7-a730/MesaFreedreno-A730-25.0.7.apk` | FCL 渲染器插件（含 `libOSMesa_8.so`） | `c13d8c13…dfc6` |
-| `release-25.0.7-a730/libOSMesa_8.so` | Mesa 25.0.7 OSMesa + freedreno(KGSL)，可单独使用 | `7ae6a1eb…7a23` |
+| `release-25.0.7-a730/MesaFreedreno-A730-25.0.7.apk` | FCL 渲染器插件（含 `libOSMesa_8.so`），versionCode 2 | `b21aeace…c75f7` |
+| `release-25.0.7-a730/libOSMesa_8.so` | Mesa 25.0.7 OSMesa + freedreno(KGSL)，可单独使用 | `a086e584…34cd9a2` |
 
-md5 见 `release-25.0.7-a730/SHA256SUMS`。
+完整 sha256 见 `release-25.0.7-a730/SHA256SUMS`。
+
+> **Minecraft 版本**：26.3 起游戏强制 Vulkan，OpenGL 路径（本插件）不再适用，请改用 Zink 等 Vulkan 渲染器；26.2 及以下正常（元数据 `maxMCVer=26.2`）。
+>
+> **签名**：插件已改用个人代码签名（CN=lincinyshan），与早期 debug 签名不兼容，升级需先卸载旧版（`adb uninstall com.a730.mesa.osmesa`）。
 
 ## 2. 它是什么
 

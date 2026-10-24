@@ -147,9 +147,10 @@ static void run_test(ANativeWindow *win) {
    LOGI("window surface=%p err=0x%x", (void *)surf, surf ? 0 : p_err());
    if (!surf) return;
 
-   EGLint ctx_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
-   EGLContext ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, ctx_attr);
-   LOGI("context=%p err=0x%x", (void *)ctx, ctx ? 0 : p_err());
+   /* 用桌面 GL（立即模式），方便画三角形复现几何路径 */
+   if (p_bind) p_bind(EGL_OPENGL_API);
+   EGLContext ctx = p_ctx(dpy, cfg, EGL_NO_CONTEXT, NULL);
+   LOGI("context(desktop GL)=%p err=0x%x", (void *)ctx, ctx ? 0 : p_err());
    if (!ctx) return;
 
    EGLBoolean mc = p_make(dpy, surf, surf, ctx);
@@ -166,16 +167,54 @@ static void run_test(ANativeWindow *win) {
    if (get_string)
       LOGI("GL_VERSION=%s GL_RENDERER=%s", get_string(0x1F02), get_string(0x1F01));
 
+   typedef void (*PFN_glEnable)(unsigned);
+   typedef void (*PFN_glBegin)(unsigned);
+   typedef void (*PFN_glEnd)(void);
+   typedef void (*PFN_glVertex3f)(float, float, float);
+   typedef void (*PFN_glColor3f)(float, float, float);
+   typedef void (*PFN_glViewport)(int, int, int, int);
+   typedef unsigned (*PFN_glGetError)(void);
+   PFN_glEnable enable = (PFN_glEnable)find_proc(egl, getproc, "glEnable");
+   PFN_glBegin begin = (PFN_glBegin)find_proc(egl, getproc, "glBegin");
+   PFN_glEnd end = (PFN_glEnd)find_proc(egl, getproc, "glEnd");
+   PFN_glVertex3f vertex3f = (PFN_glVertex3f)find_proc(egl, getproc, "glVertex3f");
+   PFN_glColor3f color3f = (PFN_glColor3f)find_proc(egl, getproc, "glColor3f");
+   PFN_glViewport viewport = (PFN_glViewport)find_proc(egl, getproc, "glViewport");
+   PFN_glGetError get_error = (PFN_glGetError)find_proc(egl, getproc, "glGetError");
+   LOGI("draw funcs: enable=%p begin=%p frontend vertex=%p", (void *)enable,
+        (void *)begin, (void *)vertex3f);
+
+   if (viewport) viewport(0, 0, 2880, 1800);
+   if (enable) { enable(0x0B71 /*DEPTH_TEST*/); }
+
    for (int i = 0; i < 600; i++) {
       if (clear_color && clear) {
-         clear_color((i / 30) % 2 ? 0.0f : 1.0f, 0.6f, 0.0f, 1.0f);
-         clear(0x4000);
+         clear_color(0.1f, 0.1f, 0.5f, 1.0f);
+         clear(0x4000 | 0x0100 /*COLOR|DEPTH*/);
+      }
+      if (begin && end && vertex3f && color3f) {
+         float t = i * 0.02f;
+         color3f(1.0f, 0.5f, 0.0f);
+         begin(0x0004 /*GL_TRIANGLES*/);
+         vertex3f(0.0f, 0.9f, 0.0f);
+         vertex3f(-0.9f, -0.9f, 0.0f);
+         vertex3f(0.9f, -0.9f, 0.0f);
+         /* 再画一批不同深度的三角形，制造较多 tile 写入 */
+         for (int k = 0; k < 64; k++) {
+            float x = -0.9f + (k % 8) * 0.22f;
+            float y = -0.9f + (k / 8) * 0.22f;
+            color3f(0.2f + 0.01f * k, 0.8f, 0.3f);
+            vertex3f(x, y, 0.5f + 0.001f * k);
+            vertex3f(x + 0.2f, y, 0.5f + 0.001f * k);
+            vertex3f(x, y + 0.2f, 0.5f + 0.001f * k);
+         }
+         end();
       }
       if (!p_swap(dpy, surf)) {
          LOGI("swapBuffers failed at frame %d err=0x%x", i, p_err());
          break;
       }
-      if (i == 0) LOGI("first swap OK");
+      if (i == 0 && get_error) LOGI("first swap OK, glGetError=0x%x", get_error());
       usleep(16000);
    }
 }

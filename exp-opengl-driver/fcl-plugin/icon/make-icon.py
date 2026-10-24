@@ -59,17 +59,18 @@ def main():
                          cx + bar_w // 2, cy + h // 2 + 26 + bar_h],
                         bar_h // 2, fill=ACCENT + (255,))
 
-    # "NATIVE" badge, bottom right
-    small = ImageFont.truetype(FONT_MONO, int(SIZE * 0.105))
+    # "NATIVE" badge, bottom-right corner (compact)
+    small = ImageFont.truetype(FONT_MONO, int(SIZE * 0.082))
     label = "NATIVE"
-    spaced = " ".join(label)
-    b2 = d.textbbox((0, 0), spaced, font=small)
+    b2 = d.textbbox((0, 0), label, font=small)
     sw, sh = b2[2] - b2[0], b2[3] - b2[1]
-    pad = 10
-    x1, y1 = SIZE - 30 - sw - pad, SIZE - 30 - sh - pad
-    d.rounded_rectangle([x1 - pad, y1 - pad + 2, x1 + sw + pad, y1 + sh + pad],
-                        radius=int(SIZE * 0.045), fill=ACCENT + (255,))
-    d.text((x1 - b2[0], y1 - b2[1]), spaced, font=small, fill=(20, 20, 20, 255))
+    pad = 9
+    margin = 26
+    x1 = SIZE - margin - pad - sw
+    y1 = SIZE - margin - pad - sh
+    d.rounded_rectangle([x1 - pad, y1 - pad, x1 + sw + pad, y1 + sh + pad],
+                        radius=int(SIZE * 0.035), fill=ACCENT + (255,))
+    d.text((x1 - b2[0], y1 - b2[1]), label, font=small, fill=(20, 20, 20, 255))
 
     for density, px in DENSITIES.items():
         out_dir = os.path.join(RES, "mipmap-" + density)

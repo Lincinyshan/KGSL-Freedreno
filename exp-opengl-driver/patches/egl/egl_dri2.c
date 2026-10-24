@@ -1361,7 +1361,7 @@ dri2_destroy_surface(_EGLDisplay *disp, _EGLSurface *surf)
    return ret;
 }
 
-static void
+void
 dri2_surf_update_fence_fd(_EGLContext *ctx, _EGLDisplay *disp,
                           _EGLSurface *surf)
 {

@@ -1,5 +1,6 @@
 platform_android.c        src/egl/drivers/dri2/platform_android.c
 egl_dri2.c                src/egl/drivers/dri2/egl_dri2.c
+egl_dri2.h                src/egl/drivers/dri2/egl_dri2.h
 eglcurrent.h              src/egl/main/eglcurrent.h
 dri_util.c                src/gallium/frontends/dri/dri_util.c
 dri_screen.c              src/gallium/frontends/dri/dri_screen.c
