@@ -16,7 +16,18 @@ fi
 [ -s "$log" ] || { echo "日志为空：$log"; exit 2; }
 
 echo "== 关键行 =="
-grep -nE 'Backend library|Using graphics backend|Failed to create backend|Could not retrieve EGL function|fcl-egl\] (KGSL|dmabuf|create_window_surface)|GL_VERSION' "$log" | head -20
+grep -nE 'Backend library|Using graphics backend|Failed to create backend|Could not retrieve EGL function|Failed to dynamically load library|fcl-egl\] (KGSL|dmabuf|create_window_surface|shim loaded)' "$log" | head -20
+
+# 插件 lib 目录是否陈旧（覆盖安装后没重启 FCL 的典型症状）
+libpath="$(grep -oE '/data/app/[^ )"]*com\.a730\.mesa\.egl[^ )"]*/lib/arm64/libEGL_freedreno\.so' "$log" | head -1)"
+stale_hint=""
+if [ -n "$libpath" ] && command -v adb >/dev/null 2>&1; then
+    if ! adb shell "test -f '$libpath'" >/dev/null 2>&1; then
+        stale_hint="插件目录已失效：$libpath
+   → 多半是『装了新 APK 但没重启 FCL』：FCL 缓存了旧插件路径。
+     先 adb shell am force-stop com.tungsten.fcl，再重开 FCL 启动游戏。"
+    fi
+fi
 
 if grep -q 'Using graphics backend OpenGL' "$log"; then
     echo
@@ -24,20 +35,31 @@ if grep -q 'Using graphics backend OpenGL' "$log"; then
     exit 0
 fi
 
+if grep -q 'Failed to dynamically load library' "$log"; then
+    echo
+    echo "结果：❌ 插件 .so 没加载成功"
+    grep -m1 'Failed to dynamically load library' "$log"
+    [ -n "$stale_hint" ] && { echo; echo "$stale_hint"; }
+    exit 1
+fi
+
 if grep -q 'Failed to create backend OpenGL\|Could not retrieve EGL function' "$log"; then
     echo
     echo "结果：❌ OpenGL 后端创建失败，游戏回退了其它后端"
     echo "原因行："
     grep -m2 -E 'Failed to create backend OpenGL|Could not retrieve EGL function' "$log"
+    [ -n "$stale_hint" ] && { echo; echo "$stale_hint"; }
     exit 1
 fi
 
 if grep -q 'Using graphics backend Vulkan' "$log"; then
     echo
     echo "结果：⚠️ 游戏用了 Vulkan（不是我们的 EGL 路径）"
+    [ -n "$stale_hint" ] && { echo; echo "$stale_hint"; }
     exit 1
 fi
 
 echo
 echo "结果：❓ 日志里没有渲染后端信息（可能还没跑到建窗口，或不是这次运行的日志）"
+[ -n "$stale_hint" ] && { echo; echo "$stale_hint"; }
 exit 2

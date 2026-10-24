@@ -51,11 +51,17 @@ cd fcl-plugin && ./build-egl-plugin.sh
 ## 4. 安装
 
 ```bash
-adb uninstall com.a730.mesa.egl          # 旧 debug 签名不能覆盖升级
-adb install fcl-plugin/MesaFreedrenoEGL-A730-25.0.7.apk
+adb install -r fcl-plugin/MesaFreedrenoEGL-A730-25.0.7.apk
+adb shell am force-stop com.tungsten.fcl   # ← 必须！见下
 ```
 
 FCL → 版本设置 → 渲染器 → **Freedreno-EGL** → 启动。
+
+> ⚠️ **覆盖安装后必须 force-stop FCL**：FCL 会把插件的 `nativeLibraryDir` 缓存在进程里，
+> 覆盖安装会让 APK 目录名变化（旧目录被删）。不重启 FCL 直接启动游戏，会报
+> `Failed to dynamically load library: .../libEGL_freedreno.so (error = null)`
+> —— 这里的 `error = null` 是假象（FCL 自己的加载器先调过 `dlerror()`），真实原因是旧路径已不存在。
+> `tools/check-game-log.sh` 会自动识别这种情况并提示。
 
 插件签名使用个人代码签名（CN=lincinyshan）；证书目录可用 `SIGNING_CERTS_DIR`
 覆盖，口令取 `KEYSTORE_PASSWORD` 或 `<certs>/passwords.txt`，缺失时回落

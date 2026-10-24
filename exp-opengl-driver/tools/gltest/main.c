@@ -6,6 +6,7 @@
 #include <android/native_window.h>
 #include <android_native_app_glue.h>
 #include <dlfcn.h>
+#include <sys/stat.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <stdio.h>
@@ -241,6 +242,31 @@ void android_main(struct android_app *app) {
    }
    setvbuf(stderr, NULL, _IONBF, 0);
    LOGI("android_main libdir=%s log=%s", g_libdir, logpath);
+
+   /* 探针：能否 dlopen 插件 shim（和 FCL 里失败的是同一个文件） */
+   {
+      char shim[700];
+      snprintf(shim, sizeof(shim), "%s/libEGL_freedreno.so", g_libdir);
+      dlerror();
+      void *h = dlopen(shim, RTLD_LAZY | RTLD_GLOBAL);
+      const char *e = dlerror();
+      LOGI("probe dlopen(shim)=%p err=%s", h, e ? e : "(null)");
+      if (h)
+         LOGI("probe dlsym eglGetDisplay=%p", dlsym(h, "eglGetDisplay"));
+
+      /* 跨 App：直接 dlopen FCL 插件目录里的同一个 .so（模拟 LWJGL hook 的调用） */
+      const char *fcl_plugin =
+         "/data/app/~~DeIuzflEAJnZQuuD1xGs1g==/com.a730.mesa.egl-aGBSCqhWCgdkppXydKKsSQ==/lib/arm64/libEGL_freedreno.so";
+      dlerror();
+      void *h2 = dlopen(fcl_plugin, 0x101 /* RTLD_LAZY|RTLD_GLOBAL */);
+      const char *e2 = dlerror();
+      LOGI("probe dlopen(fcl plugin)=%p err=%s", h2, e2 ? e2 : "(null)");
+      if (!h2) {
+         struct stat st;
+         LOGI("  stat=%d size=%lld", stat(fcl_plugin, &st),
+              (long long)(st.st_size));
+      }
+   }
    app->onAppCmd = handle_cmd;
    for (;;) {
       int events;

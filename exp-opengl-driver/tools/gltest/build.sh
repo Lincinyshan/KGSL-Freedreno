@@ -9,7 +9,11 @@ cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
 bt=/usr/lib/android-sdk/build-tools/29.0.3
 
 mkdir -p "$out/apk/lib/arm64-v8a"
+
+# 复制插件 shim（若已构建）
+shimdir="$script_dir/../../fcl-plugin/out-egl/apk/lib/arm64-v8a"
 cp "$libdir/libEGL_mesa_gl.so" "$libdir/libgallium_dri.so" "$out/apk/lib/arm64-v8a/"
+[ -f "$shimdir/libEGL_freedreno.so" ] && cp "$shimdir/libEGL_freedreno.so" "$out/apk/lib/arm64-v8a/"
 
 "$cc" -O2 -shared -fPIC -Wl,-soname,libgltest.so \
     -o "$out/apk/lib/arm64-v8a/libgltest.so" \
