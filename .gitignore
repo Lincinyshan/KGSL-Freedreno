@@ -26,3 +26,6 @@
 # 构建中间产物（可重建）
 /exp-opengl-driver/fcl-plugin/out-egl/
 /exp-opengl-driver/tools/gltest/out/
+
+# legacy（26.3 适配前）构建目录
+/exp-opengl-driver/.legacy/
