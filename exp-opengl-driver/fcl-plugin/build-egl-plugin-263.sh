@@ -71,6 +71,22 @@ aapt2 link -o "$out/base.apk" -I "$jar" \
 
 # 2) native libs
 ( cd "$out/apk" && zip -qr ../base.apk lib )
+
+# 2b) java -> classes.dex（可选：存在 java/ 源码时编译）
+if [ -d "$script_dir/java" ]; then
+    r8_jar="${R8_JAR:-$script_dir/../tools/r8.jar}"
+    [ -f "$r8_jar" ] || { echo "missing $r8_jar (d8)"; exit 1; }
+    rm -rf "$out/classes" "$out/dex"
+    mkdir -p "$out/classes" "$out/dex"
+    find "$script_dir/java" -name '*.java' > "$out/sources.txt"
+    javac --release 8 -nowarn -cp "$jar" -d "$out/classes" @"$out/sources.txt"
+    java -cp "$r8_jar" com.android.tools.r8.D8 --min-api 26 --lib "$jar" \
+        --output "$out/dex" $(find "$out/classes" -name '*.class')
+    cp "$out/dex/classes.dex" "$out/apk/classes.dex"
+    ( cd "$out/apk" && zip -q ../base.apk classes.dex )
+    echo "classes.dex: $(stat -c%s "$out/apk/classes.dex") bytes"
+fi
+
 zipalign -f 4 "$out/base.apk" "$out/aligned.apk"
 
 # 3) signing

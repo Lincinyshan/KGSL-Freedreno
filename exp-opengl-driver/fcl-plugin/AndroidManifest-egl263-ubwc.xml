@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.a730.mesa.egl263.ubwc"
-    android:versionCode="3"
-    android:versionName="26.3.0-rc1-egl-r10-Gallium-EXP">
+    android:versionCode="4"
+    android:versionName="26.3.0-rc1-egl-r11-Gallium-EXP">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
+
+    <!-- 设置界面要写 /sdcard/FCL/fcl_ab.txt -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="Mesa Freedreno A730 (26.3 UBWC)"
-        android:hasCode="false"
+        android:hasCode="true"
         android:extractNativeLibs="true"
         android:allowBackup="false">
 
-        <!-- FCL 用 queryIntentActivities(ACTION_MAIN) 扫插件，必须有 MAIN activity -->
+        <!-- FCL 用 queryIntentActivities(ACTION_MAIN) 扫插件，必须有 MAIN activity；
+             点图标进来是调试开关界面（写 /sdcard/FCL/fcl_ab.txt）。 -->
         <activity
-            android:name=".MainActivity"
+            android:name="com.a730.mesa.egl263.ubwc.MainActivity"
             android:exported="true"
-            android:label="Mesa Freedreno A730 26.3 UBWC">
+            android:label="Gallium-EXP 设置">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

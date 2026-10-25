@@ -33,3 +33,4 @@
 # Mesa 26.3 本地构建源码树（上游代码，不入库）
 /vulkan-driver/Mesa-Turnip-Builder/turnip_workdir/mesa-mesa-26.3.0-rc1/
 /.pristine/
+/exp-opengl-driver/tools/r8.jar
