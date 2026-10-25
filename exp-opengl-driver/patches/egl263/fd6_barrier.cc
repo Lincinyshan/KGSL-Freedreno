@@ -23,6 +23,17 @@ fd6_emit_flushes(struct fd_context *ctx, fd_cs &cs, unsigned flushes)
        !(flushes & FD6_INVALIDATE_CACHE))
       flushes |= FD6_INVALIDATE_CACHE | FD6_WAIT_FOR_IDLE;
 
+   /* On a7xx a blit-cache clean is additionally required for CP_BLIT / A2D
+    * writes to be visible via UCHE (a6xx doesn't need it).  Nothing in the
+    * gallium driver ever sets FD6_BLIT_CLEAN_CACHE, so derive it from the CCU
+    * flushes, matching turnip which sets TU_CMD_FLAG_BLIT_CACHE_CLEAN on the
+    * same kind of transitions.
+    */
+   if ((CHIP >= A7XX) &&
+       (flushes & (FD6_FLUSH_CCU_COLOR | FD6_FLUSH_CCU_DEPTH |
+                   FD6_INVALIDATE_CCU_COLOR | FD6_INVALIDATE_CCU_DEPTH)))
+      flushes |= FD6_BLIT_CLEAN_CACHE;
+
    /* Experiments show that invalidating CCU while it still has data in it
     * doesn't work, so make sure to always flush before invalidating in case
     * any data remains that hasn't yet been made available through a barrier.
