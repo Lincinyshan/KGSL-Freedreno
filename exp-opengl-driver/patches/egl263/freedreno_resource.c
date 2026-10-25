@@ -377,6 +377,13 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
       fd_batch_flush(batch);
    }
 
+   /* Invalidate cached texture states pointing at this resource while
+    * rsc->seqno is still the value they recorded (fd6_rebind_resource()
+    * compares against it), otherwise they would keep the descriptor of the
+    * bo we are about to swap away.
+    */
+   rebind_resource(rsc);
+
    /* TODO: somehow munge dimensions and format to copy unsupported
     * render target format to something that is supported?
     */
@@ -452,8 +459,6 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
    SWAP(rsc->track, shadow->track);
 
    fd_screen_unlock(ctx->screen);
-
-   rebind_resource(rsc);
 
    struct pipe_blit_info blit = {};
    blit.dst.resource = prsc;
@@ -740,8 +745,11 @@ invalidate_resource(struct fd_resource *rsc, unsigned usage) assert_dt
    unsigned op = translate_usage(usage);
 
    if (needs_flush || resource_busy(rsc, op)) {
-      realloc_bo(rsc, fd_bo_size(rsc->bo));
+      /* fd6_rebind_resource() matches cached texture states against the *old*
+       * seqno, so it has to run before realloc_bo() bumps it.
+       */
       rebind_resource(rsc);
+      realloc_bo(rsc, fd_bo_size(rsc->bo));
    } else {
       util_range_set_empty(&rsc->valid_buffer_range);
    }

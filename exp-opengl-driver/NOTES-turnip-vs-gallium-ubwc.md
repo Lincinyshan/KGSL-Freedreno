@@ -175,6 +175,28 @@ Turnip 在 a6xx 上因此走的是"mutable 图干脆不给 UBWC"，`layout.is_mu
 （`fd6_color_swap(..., false)`），数据存储顺序和采样顺序就对不上了 —— 那是**引入** bug，不是修 bug。
 结论：这条在 a730 上不适用；真要做，得把 `is_mutable` 同时贯穿 `emit_mrt`/`emit_blit_dst`/`emit_blit_src` 和 descriptor，等有 a7xx 设备再说。
 
+## 6. 第二轮：demote 路径上的一个真 bug
+
+前面四条只是硬化。继续读 `fd6_validate_format` → `fd_resource_uncompress` → `fd_try_shadow_resource` 这条链时，
+发现缓存纹理状态在 BO 被换掉之后**不会被失效**：
+
+- `fd_resource_set_bo()`（以及 shadow 里的 `rsc->seqno = seqno_next_u16()`）会把 `rsc->seqno` 换成**新值**；
+- 而 `fd6_rebind_resource()`（`a6xx/fd6_texture.cc:899`）判的是
+  `if (rsc->seqno == state->view_rsc_seqno[i]) tex->invalidate = true;`，
+  其中 `state->view_rsc_seqno[i]` 是建状态对象时记下的**旧值**；
+- 两个调用点（`invalidate_resource()` 和 `fd_try_shadow_resource()`）都是**先换 BO 再 rebind**，
+  所以这个比较永远不成立 → 引用了该资源的 `fd6_texture_state` 不会被标脏 →
+  之后 `fd6_texture_state()` 命中缓存，继续用**旧 BO 的 TEX 描述符**。
+
+旧的 BO 在 `fd_resource_uncompress()` 结束时随 shadow 一起 `pipe_resource_reference(NULL)` 释放，
+回到 BO cache 后可能马上被别的纹理拿走 —— 于是采样到的是**别的纹理的内容**。
+这正好对上"图集局部出现别处的条纹"；而 `noubwc` 下 `fd6_check_valid_format()` 第一行就
+`if (!rsc->layout.ubwc) return FORMAT_OK;`，根本不走 demote，所以干净。
+
+修法：把 `rebind_resource(rsc)` 挪到 BO 变更**之前**（两处），此时 `rsc->seqno` 还是缓存状态记录的那个值，
+比较成立、状态被正确标脏；shadow 里原来那句（换完之后再 rebind）删掉。
+`rebind_resource()` 只置脏位，真正的 emit 在后续 draw 时才发生，那时读的是新 BO，顺序安全。
+
 构建：`ninja -C exp-opengl-driver/gl_workdir/build-egl-26.3` 通过，产物已放到
 `release-26.3.0-rc1-a730-egl/`（`libgallium_dri.so` sha256 `ff2029ab…`），
 改过的源文件同步进了 `patches/egl263/`。
