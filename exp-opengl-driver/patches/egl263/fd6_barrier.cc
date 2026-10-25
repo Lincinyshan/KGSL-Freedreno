@@ -21,7 +21,8 @@ fd6_emit_flushes(struct fd_context *ctx, fd_cs &cs, unsigned flushes)
    if ((flushes & (FD6_FLUSH_CCU_COLOR | FD6_FLUSH_CCU_DEPTH |
                    FD6_INVALIDATE_CCU_COLOR | FD6_INVALIDATE_CCU_DEPTH)) &&
        !(flushes & FD6_INVALIDATE_CACHE))
-      flushes |= FD6_INVALIDATE_CACHE | FD6_WAIT_FOR_IDLE;
+      flushes |= FD6_INVALIDATE_CACHE |
+                 (CHIP == A6XX ? FD6_WAIT_FOR_IDLE : 0);
 
    /* On a7xx a blit-cache clean is additionally required for CP_BLIT / A2D
     * writes to be visible via UCHE (a6xx doesn't need it).  Nothing in the
