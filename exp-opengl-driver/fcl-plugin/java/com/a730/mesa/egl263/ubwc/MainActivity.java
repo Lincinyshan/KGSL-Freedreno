@@ -1,12 +1,9 @@
 package com.a730.mesa.egl263.ubwc;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -25,16 +22,23 @@ import java.io.OutputStreamWriter;
 /**
  * Gallium-EXP 插件的调试开关界面。
  *
- * 驱动在 EGL 初始化时会读取 /sdcard/FCL/fcl_ab.txt（每行 KEY=VALUE），
- * 这里就是把那套开关做成界面，省得每次 adb push。
+ * 设置写到本应用自己的 Android/media 目录（跨应用可读、写入不需要
+ * 「所有文件访问」权限），驱动在 EGL 初始化时读同一个文件：
+ *   /storage/emulated/0/Android/media/<包名>/fcl_env.txt
  * 改完必须 force-stop FCL（或杀进程）再启动游戏才生效。
  */
 public class MainActivity extends Activity {
-    private static final String DIR = "/sdcard/FCL";
-    private static final String FILE = DIR + "/fcl_ab.txt";
+    private static final String FILE_NAME = "fcl_env.txt";
 
     private CheckBox cbFlush, cbNotile, cbNoubwc, cbNoFastClear, cbSysmem, cbNobin;
     private TextView status;
+
+    private File envFile() {
+        File[] dirs = getExternalMediaDirs();
+        File dir = (dirs != null && dirs.length > 0 && dirs[0] != null)
+                ? dirs[0] : getExternalFilesDir(null);
+        return new File(dir, FILE_NAME);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +52,7 @@ public class MainActivity extends Activity {
         TextView title = new TextView(this);
         title.setTextSize(16f);
         title.setText("Gallium-EXP · 调试开关\n"
-                + "写入 " + FILE + "\n"
+                + "写入：" + envFile().getAbsolutePath() + "\n"
                 + "改完要 force-stop FCL，再启动游戏");
         root.addView(title);
 
@@ -73,15 +77,6 @@ public class MainActivity extends Activity {
         });
         root.addView(clear);
 
-        if (!hasAllFilesAccess()) {
-            Button perm = new Button(this);
-            perm.setText("授予「所有文件访问」权限");
-            perm.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { requestAllFilesAccess(); }
-            });
-            root.addView(perm);
-        }
-
         status = new TextView(this);
         status.setTextSize(12f);
         status.setPadding(0, dp(12), 0, 0);
@@ -91,7 +86,7 @@ public class MainActivity extends Activity {
         sv.addView(root);
         setContentView(sv);
 
-        if (Build.VERSION.SDK_INT < 30
+        if (Build.VERSION.SDK_INT < 29
                 && checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                    != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[] { android.Manifest.permission.WRITE_EXTERNAL_STORAGE }, 1);
@@ -112,39 +107,17 @@ public class MainActivity extends Activity {
         return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private boolean hasAllFilesAccess() {
-        if (Build.VERSION.SDK_INT < 30)
-            return true;
-        try {
-            Object r = Environment.class.getMethod("isExternalStorageManager").invoke(null);
-            return r instanceof Boolean && (Boolean) r;
-        } catch (Throwable t) {
-            return true;
-        }
-    }
-
-    private void requestAllFilesAccess() {
-        try {
-            Intent i = new Intent("android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION");
-            i.setData(Uri.parse("package:" + getPackageName()));
-            startActivity(i);
-        } catch (Throwable t) {
-            try {
-                startActivity(new Intent("android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"));
-            } catch (Throwable t2) {
-                toast("打不开系统设置页，请手动到「所有文件访问」里授权");
-            }
-        }
-    }
-
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 
     private String readFile() {
         StringBuilder sb = new StringBuilder();
+        File f = envFile();
+        if (f == null || !f.exists())
+            return "";
         try (BufferedReader r = new BufferedReader(
-                new InputStreamReader(new FileInputStream(FILE), "UTF-8"))) {
+                new InputStreamReader(new FileInputStream(f), "UTF-8"))) {
             String line;
             while ((line = r.readLine()) != null) {
                 sb.append(line).append('\n');
@@ -188,9 +161,10 @@ public class MainActivity extends Activity {
 
     private void updateStatus(String content) {
         StringBuilder sb = new StringBuilder();
-        sb.append("权限：").append(hasAllFilesAccess() ? "可写 /sdcard" : "缺「所有文件访问」").append('\n');
-        sb.append("当前 ").append(FILE).append("：\n");
-        sb.append(content.isEmpty() ? "(空/不存在)" : content);
+        File f = envFile();
+        sb.append("路径：").append(f.getAbsolutePath()).append('\n');
+        sb.append("可写：").append(f.getParentFile() != null && f.getParentFile().canWrite() ? "是" : "否").append('\n');
+        sb.append("当前内容：\n").append(content.isEmpty() ? "(空/不存在)" : content);
         status.setText(sb.toString());
     }
 
@@ -212,15 +186,16 @@ public class MainActivity extends Activity {
         if (cbNoFastClear.isChecked())
             out.append("FCL_NO_FAST_CLEAR=1\n");
 
+        File f = envFile();
         try {
-            File dir = new File(DIR);
-            if (!dir.exists() && !dir.mkdirs())
-                throw new Exception("mkdirs failed: " + DIR);
+            File dir = f.getParentFile();
+            if (dir != null && !dir.exists() && !dir.mkdirs())
+                throw new Exception("mkdirs failed: " + dir);
             try (OutputStreamWriter w = new OutputStreamWriter(
-                    new FileOutputStream(FILE), "UTF-8")) {
+                    new FileOutputStream(f), "UTF-8")) {
                 w.write(out.toString());
             }
-            toast("已写入 " + FILE);
+            toast("已写入 " + f.getAbsolutePath());
         } catch (Throwable t) {
             toast("写入失败：" + t.getMessage());
         }
@@ -228,9 +203,9 @@ public class MainActivity extends Activity {
     }
 
     private void clear() {
-        File f = new File(FILE);
+        File f = envFile();
         boolean ok = !f.exists() || f.delete();
-        toast(ok ? "已删除 " + FILE : "删除失败：" + FILE);
+        toast(ok ? "已删除 " + f.getAbsolutePath() : "删除失败：" + f.getAbsolutePath());
         cbFlush.setChecked(false);
         cbNotile.setChecked(false);
         cbNoubwc.setChecked(false);

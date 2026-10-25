@@ -1396,19 +1396,26 @@ droid_open_device(_EGLDisplay *disp, bool swrast)
    return EGL_TRUE;
 }
 
-/* FCL A/B：/storage/emulated/0/FCL/fcl_ab.txt 每行一个 KEY=VALUE，
- * 在建 screen 之前 setenv 生效 —— 换调试开关不用重装插件，改文件即可。
+/* 插件设置：每行一个 KEY=VALUE，在建 screen 之前 setenv 生效。
+ *
+ * 文件由插件的主 Activity（Gallium-EXP 设置界面）写到它自己的
+ * Android/media 目录：该目录跨应用可读，写它也不需要「所有文件访问」权限。
+ * 不同包名（debug / ubwc / release）各有一份，按顺序取第一个存在的。
  * 例：
- *   FD_MESA_DEBUG=nolrz
- *   FCL_BO_CACHE=1
+ *   FD_MESA_DEBUG=flush,notile
+ *   FCL_NO_FAST_CLEAR=1
  */
 static void
 fcl_load_ab_config(void)
 {
    static bool loaded;
    const char *paths[] = {
-      "/storage/emulated/0/FCL/fcl_ab.txt",
-      "/sdcard/FCL/fcl_ab.txt",
+      "/storage/emulated/0/Android/media/com.a730.mesa.egl263.ubwc/fcl_env.txt",
+      "/storage/emulated/0/Android/media/com.a730.mesa.egl263/fcl_env.txt",
+      "/storage/emulated/0/Android/media/com.a730.mesa.egl263.rel/fcl_env.txt",
+      "/sdcard/Android/media/com.a730.mesa.egl263.ubwc/fcl_env.txt",
+      "/sdcard/Android/media/com.a730.mesa.egl263/fcl_env.txt",
+      "/sdcard/Android/media/com.a730.mesa.egl263.rel/fcl_env.txt",
    };
    FILE *fp = NULL;
    char line[256];
@@ -1435,7 +1442,6 @@ fcl_load_ab_config(void)
          continue;
       *eq = '\0';
       setenv(line, eq + 1, 1);
-      fprintf(stderr, "[fcl-ab] %s=%s\n", line, eq + 1);
    }
    fclose(fp);
 }
