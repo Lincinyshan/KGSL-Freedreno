@@ -31,19 +31,18 @@
 
 | 项 | 值 |
 |---|---|
-| 工作区 | `/home/lcys/android/gpu-driver` |
-| Turnip | `vulkan-driver/Mesa-Turnip-Builder`（git 分支 `stable`，3 处未提交改动，**勿 `git checkout -- .`**） |
-| GL 实验 | `exp-opengl-driver`（含构建脚本、补丁、release、FCL 插件） |
-| NDK | `/home/lcys/android/android-ndk-r30`（r30 / `30.0.16248370`）；`gpu-driver/android-ndk-r30` 是软链 |
-| SDK | `/usr/lib/android-sdk`（只有 build-tools 29.0.3，**无 platform/android.jar**） |
-| 工具链 | `vulkan-driver/.build-tools`（meson 1.12.1、ninja 1.13.2、ccache 4.14.1、patchelf、glslang） |
-| ccache | `vulkan-driver/Mesa-Turnip-Builder/.ccache`（6 GB 上限，两个项目共用） |
+| 工作区 | 仓库根目录 |
+| Turnip | `vulkan-driver/Mesa-Turnip-Builder`（外部检出，**勿 `git checkout -- .`**） |
+| 驱动源码 | Mesa 26.3.0-rc1，用 `MESA_SRC` 指定（本机在原 `exp-opengl-driver` 工作区里） |
+| NDK | Android NDK r30（API 35），用 `NDK_DIR` 指定 |
+| SDK | `build-tools`（`aapt2`/`apksigner`/`zipalign`），`android-29.jar` 自备 |
+| 工具链 | `meson`/`ninja`/`ccache` 在 PATH 里即可（本机用 `vulkan-driver/.build-tools`） |
 | 磁盘 | 35 GB 已用 / 74 GB 可用 |
 | 内存 | 3.7 GiB + 8 GiB swap，`JOBS=2` |
 
 ### 1.1 NDK 修复（重要）
 
-`turnip_workdir` 里那份 NDK 副本已删除，统一用 `/home/lcys/android/android-ndk-r30`。
+`turnip_workdir` 里那份 NDK 副本已删除，统一用 `NDK_DIR` 指向的那份。
 但那份 NDK 有**符号链接被复制成文本文件**的损坏，已修复：
 
 - `ld.lld/ld64.lld/wasm-ld/ld/lld-link` → `lld`
@@ -248,18 +247,17 @@ Token 约 80k–150k（Flash，成本可忽略）。
 ## 7. 命令速查
 
 ```bash
-# 25.0.7 OSMesa 重建（增量）
-cd /home/lcys/android/gpu-driver/exp-opengl-driver && ./build-freedreno-osmesa.sh
+# Mesa 产物（构建目录需先 setup，见 scripts/setup-build.sh）
+scripts/build-egl.sh                      # → dist/libEGL_mesa_gl.so, dist/libgallium_dri.so
 
-# 重打 FCL 插件（需要 fcl-plugin/android-29.jar）
-cd /home/lcys/android/gpu-driver/plugin && ./build.sh
+# 重打 FCL 插件（需要 plugin/android-29.jar 与 tools/r8.jar）
+cd plugin && ./build.sh                   # → dist/MesaFreedreno-26.3-main.apk
 
 # 校验产物
-cd /home/lcys/android/gpu-driver/exp-opengl-driver/release-25.0.7-a730 && cat SHA256SUMS
-md5sum /home/lcys/android/gpu-driver/vulkan-driver/Mesa-Turnip-Builder/release-26.3.0-rc1-a730/*
+sha256sum dist/*.so dist/*.apk
 
 # Turnip 重建（首次全量）
-cd /home/lcys/android/gpu-driver/vulkan-driver/Mesa-Turnip-Builder
+cd vulkan-driver/Mesa-Turnip-Builder
 DEVICE_PROFILE=a730 MESA_VER=26.3.0-rc1 LTO_MODE=off BUILD_TAG=-A730 bash build-turnip.sh
 ```
 

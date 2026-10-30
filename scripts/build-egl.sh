@@ -1,32 +1,34 @@
 #!/bin/bash -e
-# 构建 Mesa 26.3 的 EGL + gallium(freedreno, KGSL 后端) 产物到 dist/
+# 编译 Mesa 产物到 dist/。
 #
-#   源码树 : vulkan-driver/Mesa-Turnip-Builder/turnip_workdir/mesa-mesa-26.3.0-rc1
-#   构建目录: exp-opengl-driver/gl_workdir/build-egl-26.3  ← 路径被 meson 写死，别改名
-#   产物    : dist/libEGL_mesa_gl.so, dist/libgallium_dri.so
-#
-# 构建目录由 meson 预先配置（cross file 在 gl_workdir/android-aarch64-egl.txt），
-# 这里只负责 ninja + 拷贝。
+# 构建目录需要先用 scripts/setup-build.sh 配置好（默认 ./build/mesa-26.3）。
+# 也可以用 BUILD_DIR / OUT_DIR 覆盖，或写进仓库根的 .env.local（不入库）。
 set -o pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$script_dir/.." && pwd)"
-workdir="$repo/exp-opengl-driver/gl_workdir"
-builddir="${BUILD_DIR:-$workdir/build-egl-26.3}"
-outdir="${OUT_DIR:-$repo/dist}"
-tools="$repo/vulkan-driver/.build-tools"
+[ -f "$repo/.env.local" ] && . "$repo/.env.local"
 
-export PATH="$tools/bin:$PATH"
-export PYTHONPATH="$tools/lib/pydeps"
-export CCACHE_DIR="$repo/vulkan-driver/Mesa-Turnip-Builder/.ccache"
-export CCACHE_MAXSIZE=6G
+BUILD_DIR="${BUILD_DIR:-$repo/build/mesa-26.3}"
+OUT_DIR="${OUT_DIR:-$repo/dist}"
+TOOLS="$repo/vulkan-driver/.build-tools"
 
-[ -d "$builddir" ] || { echo "缺少构建目录 $builddir（meson 需要先 setup）"; exit 1; }
-mkdir -p "$outdir"
+# 可选的本地工具链/bin（存在才用）
+[ -d "$TOOLS/bin" ] && export PATH="$TOOLS/bin:$PATH"
+[ -d "$TOOLS/lib/pydeps" ] && export PYTHONPATH="$TOOLS/lib/pydeps"
+[ -n "${CCACHE_DIR:-}" ] && export CCACHE_DIR
+export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-6G}"
 
-ninja -C "$builddir"
+[ -d "$BUILD_DIR" ] || {
+    echo "缺少构建目录: $BUILD_DIR"
+    echo "先运行: MESA_SRC=... NDK_DIR=... $script_dir/setup-build.sh"
+    exit 1
+}
 
-cp -f "$builddir/src/egl/libEGL.so"                        "$outdir/libEGL_mesa_gl.so"
-cp -f "$builddir/src/gallium/targets/dri/libgallium_dri.so" "$outdir/libgallium_dri.so"
+mkdir -p "$OUT_DIR"
+ninja -C "$BUILD_DIR"
 
-sha256sum "$outdir"/*.so
+cp -f "$BUILD_DIR/src/egl/libEGL.so"                        "$OUT_DIR/libEGL_mesa_gl.so"
+cp -f "$BUILD_DIR/src/gallium/targets/dri/libgallium_dri.so" "$OUT_DIR/libgallium_dri.so"
+
+sha256sum "$OUT_DIR"/*.so

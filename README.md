@@ -7,6 +7,8 @@ freedreno gallium 驱动 + KGSL 后端，ANativeWindow 直出（零拷贝）。
 - 插件包名：`pkg.freedreno.kgsl`，版本 `26.3.0-main`（单一版本，无 release/debug 之分）
 - FCL 里显示名：`KGSL-Freedreno（OpenGL 4.6）`
 
+> 非官方项目，与 Mesa、Qualcomm、FCL 均无隶属关系。
+
 ## 目录
 
 | 路径 | 内容 |
@@ -18,21 +20,34 @@ freedreno gallium 驱动 + KGSL 后端，ANativeWindow 直出（零拷贝）。
 | `docs/` | `HANDOVER.md`、`NOTES-ubwc-artifacts.md`、`NOTES-turnip-vs-gallium-ubwc.md`、`README-FREEDRENO-EGL.md` |
 | `dist/` | 产物（不入库）：`libEGL_mesa_gl.so`、`libgallium_dri.so`、`*.apk` |
 | `archive/` | 旧版本/旧清单/日志（不入库） |
-| `exp-opengl-driver/gl_workdir/` | **Meson 构建工作区，路径固定别改名**（build-egl-26.3、deps-static、工具链 cross file） |
-| `vulkan-driver/` | Turnip 构建器 + Mesa 26.3 源码树（上游代码，不入库） |
+| `build/` | Meson 构建目录（不入库，可由 `BUILD_DIR` 改到别处） |
+| `.env.local` | 本机路径覆盖（不入库，见下） |
 
 ## 构建 / 打包
 
-```bash
-# 1) Mesa 产物（需要 gl_workdir/build-egl-26.3 已由 meson 配好）
-scripts/build-egl.sh                      # → dist/libEGL_mesa_gl.so, dist/libgallium_dri.so
+依赖：Mesa 26.3.0-rc1 源码、Android NDK r30（API 35）、meson/ninja、Android SDK build-tools。
+静态 `libdrm` 可选（`DEPS_DIR`，其 `lib/pkgconfig` 下要有 `libdrm.pc`）。
 
-# 2) FCL 插件（依赖 dist/ 里的两个 .so）
-cd plugin && ./build.sh                   # → dist/MesaFreedreno-26.3-main.apk
+```bash
+# 1) 配置 Mesa 构建目录（只需一次）
+export MESA_SRC=/path/to/mesa-26.3.0-rc1
+export NDK_DIR=/path/to/android-ndk-r30
+export DEPS_DIR=/path/to/static-deps     # 可选：静态 libdrm
+scripts/setup-build.sh
+
+# 2) 编 Mesa 产物
+scripts/build-egl.sh                     # → dist/libEGL_mesa_gl.so, dist/libgallium_dri.so
+
+# 3) 打 FCL 插件（依赖 dist/ 里的两个 .so）
+cd plugin && ./build.sh                  # → dist/MesaFreedreno-26.3-main.apk
 ```
 
+本机路径可以写进仓库根的 `.env.local`（`BUILD_DIR=` / `CCACHE_DIR=` …，不入库），
+脚本会先 source 它；显式传入的环境变量优先。
+
 插件构建需要 `plugin/android-29.jar`（Android SDK 里拷）和 `tools/r8.jar`（d8，Google Maven
-`com.android.tools:r8`），两者都不入库。
+`com.android.tools:r8`），两者都不入库。签名用 `SIGNING_CERTS_DIR` 指向的
+`codesign/codesign.p12`，没有则回退 `plugin/debug.keystore`。
 
 ## 调试开关
 
@@ -58,3 +73,13 @@ cd plugin && ./build.sh                   # → dist/MesaFreedreno-26.3-main.apk
 
 见 `docs/NOTES-ubwc-artifacts.md`（UBWC 花屏排查）与
 `docs/NOTES-turnip-vs-gallium-ubwc.md`（与 Turnip 的实现差异）。
+
+## 来源与许可
+
+- **Mesa 3D**（MIT）— freedreno 驱动、EGL 平台层、`src/freedreno/fdl` 等，
+  `mesa/patches/` 里的文件都保留了原始版权头。
+- **[SolDev69/freedreno-gallium-mesa](https://github.com/SolDev69/freedreno-gallium-mesa)**（MIT）
+  — KGSL gallium 后端（`mesa/patches/kgsl/`）。
+- 本仓库新增的脚本与插件代码 — MIT，见 [LICENSE](LICENSE)。
+
+不包含 Qualcomm 专有代码，也未使用 Qualcomm 商标或图形素材。

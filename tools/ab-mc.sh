@@ -6,8 +6,8 @@
 #   ADB=... ./ab-mc.sh flicker <prefix> [张数]
 #
 # shots/flicker 要求 MC 已经在世界里（游戏内）再执行。
-SHOTS=${SHOTS:-/home/lcys/android/gpu-driver/.tmp-shots}
-A=${ADB:-"adb -s 192.168.2.101:41293"}
+SHOTS=${SHOTS:-"${TMPDIR:-/tmp}/fcl-shots"}
+A=${ADB:-adb}
 mkdir -p "$SHOTS"
 here="$(cd "$(dirname "$0")" && pwd)"
 

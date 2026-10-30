@@ -1,3 +1,8 @@
+# ---- 本地配置与证书 ----
+/.env.local
+/signing-certs/
+/build/
+
 # ---- 构建工作区（meson 里写死了路径，别改名）----
 /exp-opengl-driver/gl_workdir/
 

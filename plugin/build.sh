@@ -92,10 +92,7 @@ fi
 zipalign -f 4 "$out/base.apk" "$out/aligned.apk"
 
 # 3) signing
-certs="$SIGNING_CERTS_DIR"
-if [ -z "$certs" ]; then
-    certs="/home/lcys/文档/deepseek-harness/default-workspace/signing-certs"
-fi
+certs="${SIGNING_CERTS_DIR:-$script_dir/../signing-certs}"
 p12="$certs/codesign/codesign.p12"
 pw="$KEYSTORE_PASSWORD"
 if [ -z "$pw" ] && [ -f "$certs/passwords.txt" ]; then
