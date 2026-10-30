@@ -1,12 +1,8 @@
 #include "kgsl_priv.h"
 #include "freedreno_ringbuffer_sp.h"
 
-/* Absolute GPU address of `offset` inside `bo`.
- *
- * submit_offset() already adds the position of a sub-allocated BO inside its
- * heap block, so for those the base must be the *block's* iova; bo->iova
- * already contains that offset and adding it on top produced a bogus address
- * ("CP opcode error opcode=0x00000000" + GPU hang on every submit).
+/* 26.x submit_offset() already includes the suballoc offset, so it has to be
+ * added to the heap block's iova rather than to the bo's own iova.
  */
 static inline uint64_t
 kgsl_bo_gpuaddr(struct fd_bo *bo, uint32_t offset)
@@ -109,9 +105,6 @@ flush_submit_list(struct list_head *submit_list)
     }
 
     fd_submit->out_fence->kfence = req.timestamp;
-
-    /* 记录最后一次提交，供 kgsl_bo_destroy 延迟释放无 fence 的 BO */
-    kgsl_note_submit(pipe->dev, kgsl_pipe->queue_id, req.timestamp);
 
     if  (fd_submit->out_fence->use_fence_fd) {
         int fd = timestamp_to_fd(pipe, req.timestamp);

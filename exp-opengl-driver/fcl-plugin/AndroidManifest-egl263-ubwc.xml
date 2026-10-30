@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.a730.mesa.egl263.ubwc"
-    android:versionCode="5"
-    android:versionName="26.3.0-rc1-egl-r12-Gallium-EXP">
+    android:versionCode="6"
+    android:versionName="26.3.0-rc1-egl-r13-Gallium-EXP">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 

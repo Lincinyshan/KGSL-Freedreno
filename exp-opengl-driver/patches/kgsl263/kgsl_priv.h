@@ -10,16 +10,7 @@ int kgsl_get_prop(int fd, unsigned int type, void *value, size_t size);
 
 struct kgsl_device {
     struct fd_device base;
-
-    /* 最后一次 GPU 提交的时间戳/上下文：KGSL 没有内核级隐式同步，
-     * 无 fence 记录的 BO 必须等这次提交完成才能安全释放。 */
-    uint64_t last_submit_ts;
-    uint32_t last_submit_ctx;
 };
-
-void kgsl_note_submit(struct fd_device *dev, uint32_t ctx, uint64_t ts);
-int kgsl_wait_ts(struct fd_device *dev, uint32_t ctx, uint64_t ts,
-                 int64_t timeout_ms);
 FD_DEFINE_CAST(fd_device, kgsl_device);
 
 struct fd_device *kgsl_device_new(int fd);

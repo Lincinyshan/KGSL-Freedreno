@@ -220,13 +220,6 @@ struct fd_device {
 
    bool has_cached_coherent;
 
-   /**
-    * KGSL: BO 没有 per-BO 隐式同步 fence，若在 GPU 可能还在用的状态下直接
-    * 塞回 BO cache，下一次分配复用就会踩到正在使用的内存（贴图/命令流花屏）。
-    * 置位后 try_recycle() 一律返回 false，改由 backend 的 destroy 延迟释放。
-    */
-   bool no_recycle;
-
    bool closefd; /* call close(fd) upon destruction */
 
    bool disable_explicit_sync_heuristic;

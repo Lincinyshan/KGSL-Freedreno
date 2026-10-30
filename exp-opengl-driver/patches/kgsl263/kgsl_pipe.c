@@ -117,21 +117,6 @@ kgsl_pipe_wait(struct fd_pipe *pipe, const struct fd_fence *fence, uint64_t time
     return wait_timestamp_safe(pipe->dev->fd, kgsl_pipe->queue_id, fence->kfence, timeout);
 }
 
-/* 供 BO 延迟释放使用：timeout_ms == 0 时为非阻塞探测 */
-int
-kgsl_wait_ts(struct fd_device *dev, uint32_t ctx, uint64_t ts, int64_t timeout_ms)
-{
-    return wait_timestamp_safe(dev->fd, ctx, ts, timeout_ms);
-}
-
-void
-kgsl_note_submit(struct fd_device *dev, uint32_t ctx, uint64_t ts)
-{
-    struct kgsl_device *kdev = to_kgsl_device(dev);
-    kdev->last_submit_ts = ts;
-    kdev->last_submit_ctx = ctx;
-}
-
 static void
 kgsl_pipe_destroy(struct fd_pipe *pipe)
 {
@@ -171,15 +156,11 @@ struct fd_pipe *kgsl_pipe_new(struct fd_device *dev, enum fd_pipe_id id,
     pipe->funcs = &pipe_funcs;
 
     struct kgsl_devinfo info;
-    int r1 = kgsl_get_prop(dev->fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info));
-    uint64_t gmem_iova = 0;
-    int r2 = r1 ? -1
-                : kgsl_get_prop(dev->fd, KGSL_PROP_UCHE_GMEM_VADDR, &gmem_iova,
-                                sizeof(gmem_iova));
-    fprintf(stderr, "[fcl-dri] kgsl_pipe_new: devinfo=%d gmem=%d (errno=%d)\n",
-            r1, r2, (r1 || r2) ? errno : 0);
-    fflush(stderr);
-    if (r1 || r2)
+    if(kgsl_get_prop(dev->fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info)))
+        goto fail;
+
+    uint64_t gmem_iova;
+    if(kgsl_get_prop(dev->fd, KGSL_PROP_UCHE_GMEM_VADDR, &gmem_iova, sizeof(gmem_iova)))
         goto fail;
 
     kgsl_pipe->dev_id.gpu_id =

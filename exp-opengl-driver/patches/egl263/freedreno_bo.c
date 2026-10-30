@@ -350,10 +350,6 @@ try_recycle(struct fd_bo *bo)
    if (suballoc_bo(bo))
       return false;
 
-   /* KGSL: 回收时机必须先等 GPU 用完，交给 backend 的延迟释放路径处理 */
-   if (dev->no_recycle)
-      return false;
-
    if (bo->bo_reuse == BO_CACHE)
       return fd_bo_cache_free(&dev->bo_cache, bo) == 0;
 
