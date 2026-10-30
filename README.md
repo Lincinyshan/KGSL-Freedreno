@@ -1,9 +1,14 @@
 # gpu-driver — Mesa freedreno (KGSL) for FCL
 
+> [!NOTE]
+> The project was built entirely with vibecoding.
+
 给 FCL（Minecraft Java 版启动器）用的 **OpenGL 驱动插件**：Mesa 26.3 的 EGL +
 freedreno gallium 驱动 + KGSL 后端，ANativeWindow 直出（零拷贝）。
 
-- 目标设备：Adreno 730v3（chip_id `0x07030002`，a7xx_gen1，KGSL）
+> 注：简单来说：__纯原生__
+
+- 目标设备：Adreno 730v3（chip_id `0x07030002`，a7xx_gen1，KGSL）//注：理论上整个7系Adreno都能用
 - 插件包名：`pkg.freedreno.kgsl`，版本 `26.3.0-main`（单一版本，无 release/debug 之分）
 - FCL 里显示名：`KGSL-Freedreno（OpenGL 4.6）`
 
