@@ -124,4 +124,4 @@ mkdir -p "$distdir"
 echo "APK: $distdir/$name.apk"
 aapt dump badging "$distdir/$name.apk" 2>/dev/null | head -4 || true
 apksigner verify --print-certs "$distdir/$name.apk" 2>/dev/null | head -3 || true
-unzip -l "$script_dir/$name.apk"
+unzip -l "$distdir/$name.apk"
