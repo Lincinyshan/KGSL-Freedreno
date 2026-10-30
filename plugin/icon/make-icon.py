@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
-"""Generate the FCL renderer-plugin icon: "GL4.6" with a small "NATIVE" badge.
+"""Generate the FCL renderer-plugin icon.
 
-Renders once at high resolution, then downsamples to the five mipmap densities.
+Design "B": a GPU die outline with pins, and a white arrow piercing in from
+the left, tip stopping at the die centre (direct-to-GPU / zero-copy).
+
+Renders at 512 and downsamples to the five mipmap densities.
 Run from anywhere:  python3 make-icon.py
 """
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RES = os.path.join(HERE, "..", "res")
+PREVIEW = os.path.join(HERE, "preview")
 SIZE = 512
 DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 
-FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-FONT_MONO = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
-
-BG_TOP = (16, 34, 22)
-BG_BOTTOM = (5, 14, 9)
-_accent = os.environ.get("ICON_ACCENT", "#FFA726").lstrip("#")
-ACCENT = tuple(int(_accent[i:i + 2], 16) for i in (0, 2, 4))
-BADGE = os.environ.get("ICON_BADGE", "NATIVE")
-SUBTITLE = os.environ.get("ICON_SUBTITLE", "")
-WHITE = (255, 255, 255)
+BG_TOP = (18, 22, 28)
+BG_BOTTOM = (9, 12, 16)
+FRAME = (42, 51, 63)
+CHIP = (245, 166, 35)          # amber die
+CHIP_FILL = (26, 18, 7)        # very dark amber, keeps the die readable
+PIN = (90, 102, 117)
+ARROW = (245, 247, 250)
 
 
 def rounded_mask(size, radius):
@@ -30,72 +31,70 @@ def rounded_mask(size, radius):
     return m
 
 
-def main():
-    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    # vertical gradient background
-    grad = Image.new("RGBA", (SIZE, SIZE))
+def gradient(size):
+    grad = Image.new("RGBA", (size, size))
     gd = ImageDraw.Draw(grad)
-    for y in range(SIZE):
-        t = y / (SIZE - 1)
+    for y in range(size):
+        t = y / (size - 1)
         c = tuple(int(BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t) for i in range(3))
-        gd.line([(0, y), (SIZE, y)], fill=c + (255,))
-    grad.putalpha(rounded_mask(SIZE, int(SIZE * 0.22)))
-    img.alpha_composite(grad)
+        gd.line([(0, y), (size, y)], fill=c + (255,))
+    grad.putalpha(rounded_mask(size, int(size * 0.22)))
+    return grad
 
+
+def main():
+    S = SIZE
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    img.alpha_composite(gradient(S))
     d = ImageDraw.Draw(img)
 
-    # thin accent frame
-    d.rounded_rectangle([8, 8, SIZE - 9, SIZE - 9], int(SIZE * 0.20),
-                        outline=ACCENT + (90,), width=3)
+    d.rounded_rectangle([10, 10, S - 11, S - 11], int(S * 0.20),
+                        outline=FRAME + (200,), width=4)
 
-    # "GL4.6" — main text
-    main_font = ImageFont.truetype(FONT_BOLD, int(SIZE * 0.255))
-    text = "GL4.6"
-    bbox = d.textbbox((0, 0), text, font=main_font)
-    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    cx, cy = SIZE // 2, SIZE // 2 - 26
-    d.text((cx - w / 2 - bbox[0], cy - h / 2 - bbox[1]), text, font=main_font, fill=WHITE)
+    cx, cy = S // 2, S // 2
+    half = int(S * 0.205)
+    stroke = int(S * 0.035)
+    rad = int(S * 0.10)
 
-    # accent underline
-    bar_w, bar_h = int(w * 0.92), 8
-    d.rounded_rectangle([cx - bar_w // 2, cy + h // 2 + 26,
-                         cx + bar_w // 2, cy + h // 2 + 26 + bar_h],
-                        bar_h // 2, fill=ACCENT + (255,))
+    # pins (behind the die)
+    pin_len, pin_thick, gap = int(S * 0.055), int(S * 0.030), int(S * 0.017)
+    spread = int(S * 0.11)
+    for off in (-spread, 0, spread):
+        for x0, x1 in (
+            (cx - half - gap - pin_len, cx - half - gap),
+            (cx + half + gap, cx + half + gap + pin_len),
+        ):
+            d.rounded_rectangle([x0, cy + off - pin_thick // 2, x1, cy + off + pin_thick // 2],
+                                pin_thick // 2, fill=PIN + (255,))
+        for y0, y1 in (
+            (cy - half - gap - pin_len, cy - half - gap),
+            (cy + half + gap, cy + half + gap + pin_len),
+        ):
+            d.rounded_rectangle([cx + off - pin_thick // 2, y0, cx + off + pin_thick // 2, y1],
+                                pin_thick // 2, fill=PIN + (255,))
 
-    # 副标题（例如 noUBWC），居中放在强调条下方
-    if SUBTITLE:
-        sub = ImageFont.truetype(FONT_MONO, int(SIZE * 0.105))
-        sb = d.textbbox((0, 0), SUBTITLE, font=sub)
-        sw2, sh2 = sb[2] - sb[0], sb[3] - sb[1]
-        sy = cy + h / 2 + 26 + bar_h + 26
-        d.text((cx - sw2 / 2 - sb[0], sy - sh2 / 2 - sb[1]), SUBTITLE,
-               font=sub, fill=ACCENT + (255,))
+    # die: dark fill + amber outline
+    d.rounded_rectangle([cx - half, cy - half, cx + half, cy + half], rad,
+                        fill=CHIP_FILL + (255,), outline=CHIP + (255,), width=stroke)
 
-    # "NATIVE" badge, bottom-right corner (compact)
-    small = ImageFont.truetype(FONT_MONO, int(SIZE * 0.082))
-    label = BADGE
-    b2 = d.textbbox((0, 0), label, font=small)
-    sw, sh = b2[2] - b2[0], b2[3] - b2[1]
-    pad = 9
-    margin = 26
-    x1 = SIZE - margin - pad - sw
-    y1 = SIZE - margin - pad - sh
-    d.rounded_rectangle([x1 - pad, y1 - pad, x1 + sw + pad, y1 + sh + pad],
-                        radius=int(SIZE * 0.035), fill=ACCENT + (255,))
-    d.text((x1 - b2[0], y1 - b2[1]), label, font=small, fill=(20, 20, 20, 255))
+    # arrow: shaft from the left edge, head with the tip at the die centre
+    head_len = int(S * 0.120)
+    head_half = int(S * 0.098)
+    shaft_half = int(S * 0.032)
+    x0 = int(S * 0.058)
+    d.rounded_rectangle([x0, cy - shaft_half, cx - head_len, cy + shaft_half],
+                        shaft_half // 2, fill=ARROW + (255,))
+    d.polygon([(cx - head_len, cy - head_half), (cx - head_len, cy + head_half),
+               (cx, cy)], fill=ARROW + (255,))
 
-    for density, px in DENSITIES.items():
-        out_dir = os.path.join(RES, "mipmap-" + density)
-        os.makedirs(out_dir, exist_ok=True)
-        thumb = img.resize((px, px), Image.LANCZOS)
-        path = os.path.join(out_dir, "ic_launcher.png")
-        thumb.save(path, optimize=True)
-        print("%-18s %4dx%-4d %s" % (os.path.relpath(path, HERE), px, px,
-                                    "%d bytes" % os.path.getsize(path)))
+    os.makedirs(PREVIEW, exist_ok=True)
+    img.save(os.path.join(PREVIEW, "icon-512.png"))
 
-    os.makedirs(os.path.join(HERE, "preview"), exist_ok=True)
-    img.save(os.path.join(HERE, "preview", "icon-512.png"), optimize=True)
-    print("preview:", os.path.join(HERE, "preview", "icon-512.png"))
+    for name, px in DENSITIES.items():
+        out = os.path.join(RES, "mipmap-" + name)
+        os.makedirs(out, exist_ok=True)
+        img.resize((px, px), Image.LANCZOS).save(os.path.join(out, "ic_launcher.png"))
+        print("wrote", os.path.join(out, "ic_launcher.png"), px)
 
 
 if __name__ == "__main__":
