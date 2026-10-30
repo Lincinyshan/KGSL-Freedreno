@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="pkg.freedreno.kgsl"
+    android:versionCode="1"
+    android:versionName="26.3.0-main">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
+
+    <!-- 设置写到本应用的 Android/media 目录：不需要「所有文件访问」，
+         只有 API < 29 才需要写外部存储权限。 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="Mesa Freedreno A730 (26.3 UBWC)"
+        android:hasCode="true"
+        android:extractNativeLibs="true"
+        android:allowBackup="false">
+
+        <!-- FCL 用 queryIntentActivities(ACTION_MAIN) 扫插件，必须有 MAIN activity；
+             点图标进来是调试开关界面（写 Android/media/<包名>/fcl_env.txt）。 -->
+        <activity
+            android:name="pkg.freedreno.kgsl.MainActivity"
+            android:exported="true"
+            android:label="KGSL-Freedreno 设置">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- FCL renderer plugin v1: POJAV_RENDERER=opengles3_desktopgl_* 走 gl_bridge(EGL) 路径 -->
+        <meta-data android:name="fclPlugin" android:value="true" />
+        <meta-data android:name="des" android:value="KGSL-Freedreno（OpenGL 4.6）" />
+        <meta-data android:name="renderer" android:value="KGSL-Freedreno（OpenGL 4.6）:libEGL_freedreno.so:libEGL_freedreno.so" />
+        <meta-data android:name="boatEnv" android:value="" />
+        <meta-data android:name="pojavEnv" android:value="POJAV_RENDERER=opengles3_desktopgl_freedreno:LIBGL_ES=3:MESA_GL_VERSION_OVERRIDE=4.6:MESA_GLSL_VERSION_OVERRIDE=460:allow_higher_compat_version=true:force_glsl_extensions_warn=true" />
+        <meta-data android:name="minMCVer" android:value="" />
+        <meta-data android:name="maxMCVer" android:value="" />
+    </application>
+</manifest>

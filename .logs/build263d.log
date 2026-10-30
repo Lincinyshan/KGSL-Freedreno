@@ -1,4 +1,0 @@
-[1/21] Generating src/git_sha1.h with a custom command
-[2/4] Compiling C object src/util/u_gralloc/lib_mesa_u_gralloc.a.p/u_gralloc_internal.c.o
-[3/4] Linking static target src/util/u_gralloc/lib_mesa_u_gralloc.a
-[4/4] Linking target src/egl/libEGL.so
