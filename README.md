@@ -46,8 +46,12 @@ cd plugin && ./build.sh                  # → dist/MesaFreedreno-26.3-main.apk
 脚本会先 source 它；显式传入的环境变量优先。
 
 插件构建需要 `plugin/android-29.jar`（Android SDK 里拷）和 `tools/r8.jar`（d8，Google Maven
-`com.android.tools:r8`），两者都不入库。签名用 `SIGNING_CERTS_DIR` 指向的
-`codesign/codesign.p12`，没有则回退 `plugin/debug.keystore`。
+`com.android.tools:r8`），两者都不入库。
+
+**签名**：官方发布包由维护者的私钥签名（证书 SHA-256 指纹
+`66ab6f193ed3e6d6637d66e0b004a38505b00056f0b7b127da5f1422563362b8`，可自行核对）。
+仓库不包含证书与口令，构建时用 `SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`；
+没有则回退 `plugin/debug.keystore` 调试签名——**调试签名的包覆盖不了官方版**，需要先卸载。
 
 ## 调试开关
 

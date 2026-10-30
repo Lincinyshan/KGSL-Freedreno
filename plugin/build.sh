@@ -108,7 +108,9 @@ if [ -f "$p12" ] && [ -n "$pw" ]; then
         --out "$distdir/$name.apk" "$out/aligned.apk"
     echo "signed with codesign.p12 (alias 'local code signing')"
 else
-    echo "WARN: codesign.p12 / password not found, falling back to debug keystore"
+    echo "WARN: 没有找到 $p12 或口令（SIGNING_CERTS_DIR / KEYSTORE_PASSWORD）"
+    echo "WARN: 改用调试签名。调试签名与官方发布版的证书不同，"
+    echo "WARN: 装到已有官方版的设备上会因为签名不一致而失败（需要先卸载）。"
     if [ ! -f "$script_dir/debug.keystore" ]; then
         keytool -genkeypair -keystore "$script_dir/debug.keystore" -storepass android \
             -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \

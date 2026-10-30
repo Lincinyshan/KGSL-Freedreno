@@ -50,8 +50,9 @@ cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-ma
 
 - 插件构建依赖 `plugin/android-29.jar`（Android SDK 里的 `android.jar`）和
   `tools/r8.jar`（Google Maven `com.android.tools:r8`）。两者都不入库，缺失时脚本会报错。
-- 签名用 `SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`（口令从同目录
-  `passwords.txt` 读）；没有就用 `plugin/debug.keystore` 调试签名。**不要提交证书/口令**。
+- 签名：官方包用维护者私钥（`SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`，
+  口令从同目录 `passwords.txt` 读）；没有证书时回退 `plugin/debug.keystore`，
+  那是调试签名，**和官方版不兼容**（签名不同，覆盖安装会失败）。**不要提交证书/口令**。
 - 产物全部在 `dist/`（gitignore），构建不会产生 git 变更。
 - 只有用户明确要求时才构建。
 
