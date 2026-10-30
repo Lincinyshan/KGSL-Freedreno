@@ -1,12 +1,14 @@
 #!/bin/bash -e
 # 独立复现 APK：NativeActivity + 我们的 libEGL/libgallium_dri
 script_dir="$(cd "$(dirname "$0")" && pwd)"
-ndk="$script_dir/../../../android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
+repo="$(cd "$script_dir/../.." && pwd)"
+[ -f "$repo/.env.local" ] && . "$repo/.env.local"
+ndk="$repo/android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
 libdir="${LIBDIR:-$script_dir/../../dist}"
 jar="$script_dir/../../plugin/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
 out="${OUT:-$script_dir/out}"
 cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
-bt=/usr/lib/android-sdk/build-tools/29.0.3
+bt="${ANDROID_BUILD_TOOLS:-$(dirname "$(command -v aapt2 2>/dev/null || echo /usr/bin/aapt2)")}"
 
 mkdir -p "$out/apk/lib/arm64-v8a"
 

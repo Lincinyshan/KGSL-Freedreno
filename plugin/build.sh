@@ -9,7 +9,9 @@
 # 证书目录可用 SIGNING_CERTS_DIR 覆盖，口令用 KEYSTORE_PASSWORD 覆盖，
 # 否则自动读取目录下的 passwords.txt。
 script_dir="$(cd "$(dirname "$0")" && pwd)"
-ndk="$script_dir/../../android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
+repo="$(cd "$script_dir/.." && pwd)"
+[ -f "$repo/.env.local" ] && . "$repo/.env.local"
+ndk="$repo/android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
 libdir="$script_dir/../dist"; [ -n "$LIBDIR" ] && libdir="$LIBDIR"
 jar="$script_dir/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
 out="${OUT_DIR:-$script_dir/out}"
