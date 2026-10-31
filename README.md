@@ -48,8 +48,10 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| 原版 Minecraft 26.3 | ✅ 正常 | 无花屏、无崩溃，GL 4.6 Core 上下文 |
-| 光影（Iris shader pack） | ⚠️ 待验证 | Iris 的着色器是 `#version 150 compatibility`，需要 Compatibility Profile；开关已提供，实机证据还不充分 |
+| 原版 Minecraft 26.3 | ✅ 正常 | 无花屏、无崩溃；Core / Compatibility 都能跑 |
+| 光影（Iris shader pack） | ✅ 可用 | Chocapic13 V6 Lite 实测可加载；个别包会报 `compatibility profile is not supported`，用「强制 Compatibility Profile」解决 |
+| Core 下的物品图标 | ⚠️ 已知问题 | **Core Profile + UBWC** 时图标会出现噪点/透明；`noubwc` 或切 Compatibility 后正常 |
+| 区块锯齿状空洞 | ℹ️ 原版行为 | 原版「区块构建器：线程化」的官方说明就是“破坏方块时短暂出现图像空洞”，光影下编译慢会更明显 |
 | Adreno 730v3 | ✅ 已验证 | 目标设备（Xiaomi Pad 6 Pro / Android 15 / 内核 5.10） |
 | 其他 Adreno 7xx / 6xx | ❓ 理论可用 | 同一份 `fd6_*` 驱动，但**未实机验证**，见下方说明 |
 | 32 位应用 | ❌ 不支持 | 插件只带 `arm64-v8a` |
@@ -121,7 +123,8 @@ GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc1
 | 强制 Compatibility | `FCL_GL_FORCE_COMPAT=1` | 强制 4.6 Compatibility |
 
 > [!TIP]
-> Core / Compatibility 二选一，都不选 = 按游戏的请求；两个同时写 = **都不生效**。
+> Core / Compatibility 二选一，都不选 = 按游戏的请求（MC 26.3 会要 Core）；两个同时写 = **都不生效**。
+> 开光影、或者遇到物品图标噪点时，建议勾「强制 Compatibility Profile」。
 > MC 26.3 自己的着色器是 `#version 140` + UBO、Iris 的包是 `#version 150 compatibility`，
 > 两者都要求 Compatibility Profile。
 
@@ -204,9 +207,13 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 
 ## 已知问题
 
-- **Iris 光影**：需要 Compatibility Profile（`#version 150 compatibility`），Core 上下文下
-  会直接编译失败并禁用渲染管线。用设置界面的「强制 Compatibility Profile」可以绕开，
-  但完整验证还没做完。
+- **Core Profile 下的物品图标**：`Core + UBWC` 时图集的一部分 sprite 会变成彩色噪点或全透明。
+  实测对照：`Core + noubwc` 干净、`Compatibility`（UBWC 开）也干净，只有
+  `Core + UBWC` 会花 —— 是 MC 在 core 下选的纹理上传路径踩到了我们的 UBWC 上传实现。
+  **临时规避**：勾「强制 Compatibility Profile」，或加 `FD_MESA_DEBUG=noubwc`。
+- **区块锯齿空洞**：不是驱动 bug。原版设置里「区块构建器：线程化」的说明就写着
+  “附近的区块在并行线程中编译，可能导致破坏方块时短暂出现图像空洞”；开光影时
+  编译变慢，空洞停留时间更长。破坏方块会触发区块重建，所以看起来“一破坏就好了”。
 - **其他机型**：6xx / 7xx 共用 `fd6_*` 驱动，但 UBWC 相关的修复是针对 a730v3 调的，
   别的芯片可能暴露新的花屏 —— 这类问题在没有设备的情况下无法复现。
 - **构建系统耦合**：`scripts/` 假设你已经有可用的 Meson 构建目录；从零配置见
@@ -231,6 +238,10 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 
 MC 26.3 请求的是 Core Profile，而 Iris 的着色器写着 `#version 150 compatibility`。
 在插件设置里勾选「强制 Compatibility Profile」，保存后 force-stop FCL 再试。
+
+顺便解决了另一件事：MC 自己的着色器是 `#version 140` + `std140` uniform block，
+在 Core 上下文里属于**非法写法**（Mesa 只警告后强行编译，一次启动会刷 5000+ 条警告），
+在 Compatibility 下才是合法的。所以**开光影建议直接用 Compatibility**。
 
 </details>
 
