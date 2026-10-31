@@ -8,7 +8,7 @@ freedreno gallium 驱动 + KGSL 后端，ANativeWindow 直出（零拷贝）。
 
 > 注：简单来说：__纯原生__
 
-- 目标设备：Adreno 730v3（chip_id `0x07030002`，a7xx_gen1，KGSL）//注：理论上整个7系Adreno都能用
+- 目标设备：Adreno 730v3（chip_id `0x07030002`，a7xx_gen1，KGSL）//注：理论上整个7系Adreno都能用 甚至6系（除出Adreno 730v3以外兼容问题不要写issues，无法复现）
 - 插件包名：`pkg.freedreno.kgsl`，版本 `26.3.0-main`（单一版本，无 release/debug 之分）
 - FCL 里显示名：`KGSL-Freedreno（OpenGL 4.6）`
 
@@ -68,6 +68,7 @@ cd plugin && ./build.sh                  # → dist/MesaFreedreno-26.3-main.apk
 |---|---|
 | `flush` / `notile` / `noubwc` / `sysmem` / `nobin` | `FD_MESA_DEBUG` 的调试项 |
 | `FCL_NO_FAST_CLEAR` | 强制关闭 a7xx GMEM fast clear |
+| `FCL_GL_FORCE_CORE` / `FCL_GL_FORCE_COMPAT` | 强制 GL 上下文 profile：二选一；都不选 = 按游戏请求；两个都写 = 都不生效 |
 
 ## 关键实现点
 

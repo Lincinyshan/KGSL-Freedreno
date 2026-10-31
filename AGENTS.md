@@ -73,6 +73,16 @@ cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-ma
 
 `ubwc / notile / flush / sysmem / nobin / FCL_NO_FAST_CLEAR` 是运行时开关，不是打包变体。
 
+GL 上下文 profile 也是运行时开关（设置界面二选一，都不选 = 按游戏的请求）：
+
+| 变量 | 作用 |
+|---|---|
+| `FCL_GL_FORCE_CORE=1` | 强制 Core Profile（4.6 Core） |
+| `FCL_GL_FORCE_COMPAT=1` | 强制 Compatibility Profile（4.6 Compatibility） |
+
+两个同时出现时**都不生效**（UI 互斥，但文件可能被手改）。MC 26.3 的 `#version 140` + UBO
+着色器和 Iris 的 `#version 150 compatibility` 都要求 compatibility。
+
 ## 改 Mesa 的规矩
 
 1. 先读代码再改；改完把**整个文件**拷进 `mesa/patches/`，新增文件要同时加进 `mesa/patches/MAP`。

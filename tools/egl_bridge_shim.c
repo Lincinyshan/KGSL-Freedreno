@@ -16,6 +16,7 @@
 #include <dlfcn.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* 自备 EGL 类型（不引 EGL 头，避免与转发原型冲突；aarch64 ABI 一致） */
@@ -191,6 +192,16 @@ glXGetProcAddressARB(const char *name)
 #define EGL_ATTR_PROFILE_MASK_ 0x30FD
 #define EGL_ATTR_NONE_ 0x3038
 #define EGL_API_OPENGL_ 0x30A2
+#define EGL_BIT_CORE_PROFILE_ 0x0001
+#define EGL_BIT_COMPAT_PROFILE_ 0x0002
+
+static int
+env_on(const char *name)
+{
+   const char *v = getenv(name);
+
+   return v && v[0] && strcmp(v, "0") != 0;
+}
 
 static int g_force_logged;
 
@@ -267,6 +278,26 @@ eglCreateContext(EGLDisplay d, EGLConfig c, EGLContext share,
    for (const EGLint *p = attr; p && p[0] != EGL_ATTR_NONE_; p += 2) {
       if (p[0] == EGL_ATTR_PROFILE_MASK_)
          profile = p[1];
+   }
+
+   /* 强制 profile（调试选项）：两个都设 = 都不生效 */
+   int force_core = env_on("FCL_GL_FORCE_CORE");
+   int force_compat = env_on("FCL_GL_FORCE_COMPAT");
+   if (force_core && force_compat) {
+      force_core = force_compat = 0;
+   }
+   if (force_core)
+      profile = EGL_BIT_CORE_PROFILE_;
+   else if (force_compat)
+      profile = EGL_BIT_COMPAT_PROFILE_;
+
+   static int logged;
+   if (!logged) {
+      logged = 1;
+      if (force_core)
+         fprintf(stderr, "[fcl-egl] profile forced: core\n");
+      else if (force_compat)
+         fprintf(stderr, "[fcl-egl] profile forced: compatibility\n");
    }
 
    EGLint out[10];

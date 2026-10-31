@@ -22,6 +22,7 @@ import java.io.OutputStreamWriter;
 /**
  * KGSL-Freedreno 插件的调试开关界面。
  *
+ * 调试开关：FD_MESA_DEBUG 各项、fast clear、GL profile（core/compat 二选一）。
  * 设置写到本应用自己的 Android/media 目录（跨应用可读、写入不需要
  * 「所有文件访问」权限），驱动在 EGL 初始化时读同一个文件：
  *   /storage/emulated/0/Android/media/<包名>/fcl_env.txt
@@ -31,6 +32,7 @@ public class MainActivity extends Activity {
     private static final String FILE_NAME = "fcl_env.txt";
 
     private CheckBox cbFlush, cbNotile, cbNoubwc, cbNoFastClear, cbSysmem, cbNobin;
+    private CheckBox cbForceCore, cbForceCompat;
     private TextView status;
 
     private File envFile() {
@@ -62,6 +64,20 @@ public class MainActivity extends Activity {
         cbNoFastClear = addCheck(root, "FCL_NO_FAST_CLEAR —— 禁用 GMEM fast clear");
         cbSysmem = addCheck(root, "sysmem —— 全部走 sysmem 渲染");
         cbNobin = addCheck(root, "nobin —— 禁用硬件 binning");
+
+        // GL profile 二选一（都不选 = 按游戏的请求走）
+        cbForceCore = addCheck(root, "强制 Core Profile —— 严格现代 GL（Iris shader pack 会编译失败）");
+        cbForceCompat = addCheck(root, "强制 Compatibility Profile —— 保留旧特性（MC 26.3 的 140 着色器与 Iris 都需要）");
+        cbForceCore.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (cbForceCore.isChecked()) cbForceCompat.setChecked(false);
+            }
+        });
+        cbForceCompat.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (cbForceCompat.isChecked()) cbForceCore.setChecked(false);
+            }
+        });
 
         Button save = new Button(this);
         save.setText("保存");
@@ -131,7 +147,7 @@ public class MainActivity extends Activity {
         String content = readFile();
 
         boolean flush = false, notile = false, noubwc = false, sysmem = false, nobin = false;
-        boolean noFc = false;
+        boolean noFc = false, forceCore = false, forceCompat = false;
         for (String line : content.split("\n")) {
             line = line.trim();
             if (line.startsWith("FD_MESA_DEBUG=")) {
@@ -146,7 +162,19 @@ public class MainActivity extends Activity {
             } else if (line.startsWith("FCL_NO_FAST_CLEAR=")) {
                 String v = line.substring("FCL_NO_FAST_CLEAR=".length()).trim();
                 noFc = !v.isEmpty() && !v.equals("0");
+            } else if (line.startsWith("FCL_GL_FORCE_CORE=")) {
+                String v = line.substring("FCL_GL_FORCE_CORE=".length()).trim();
+                forceCore = !v.isEmpty() && !v.equals("0");
+            } else if (line.startsWith("FCL_GL_FORCE_COMPAT=")) {
+                String v = line.substring("FCL_GL_FORCE_COMPAT=".length()).trim();
+                forceCompat = !v.isEmpty() && !v.equals("0");
             }
+        }
+
+        boolean profileConflict = forceCore && forceCompat;
+        if (profileConflict) {
+            forceCore = false;
+            forceCompat = false;
         }
 
         cbFlush.setChecked(flush);
@@ -155,8 +183,12 @@ public class MainActivity extends Activity {
         cbNoFastClear.setChecked(noFc);
         cbSysmem.setChecked(sysmem);
         cbNobin.setChecked(nobin);
+        cbForceCore.setChecked(forceCore);
+        cbForceCompat.setChecked(forceCompat);
 
-        updateStatus(content);
+        updateStatus(profileConflict
+                ? content + "\n# 注意：FCL_GL_FORCE_CORE 与 FCL_GL_FORCE_COMPAT 同时存在，两者都不生效\n"
+                : content);
     }
 
     private void updateStatus(String content) {
@@ -185,6 +217,13 @@ public class MainActivity extends Activity {
         }
         if (cbNoFastClear.isChecked())
             out.append("FCL_NO_FAST_CLEAR=1\n");
+        // 二选一：万一两个都被勾上，则都不写（与驱动的冲突处理一致）
+        if (cbForceCore.isChecked() != cbForceCompat.isChecked()) {
+            if (cbForceCore.isChecked())
+                out.append("FCL_GL_FORCE_CORE=1\n");
+            else
+                out.append("FCL_GL_FORCE_COMPAT=1\n");
+        }
 
         File f = envFile();
         try {
@@ -212,6 +251,8 @@ public class MainActivity extends Activity {
         cbNoFastClear.setChecked(false);
         cbSysmem.setChecked(false);
         cbNobin.setChecked(false);
+        cbForceCore.setChecked(false);
+        cbForceCompat.setChecked(false);
         updateStatus(readFile());
     }
 }
