@@ -8,8 +8,8 @@
 
 # ---- 上游/外部（不入库）----
 /vulkan-driver/
-/android-ndk-r30/
-/android-sdk/
+/android-ndk-r30
+/android-sdk
 /third_party/
 
 # ---- 产物与归档 ----
@@ -30,6 +30,7 @@
 /tools/gltest/out/
 
 # ---- 杂项 ----
+/.tmp/
 *.log
 *.swp
 .DS_Store
