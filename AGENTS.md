@@ -61,7 +61,7 @@ cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-ma
 | 项 | 值 |
 |---|---|
 | package | `pkg.freedreno.kgsl`（单一包名） |
-| 版本 | `26.3.0-main`（只有一个版本，不要 release/debug/ubwc 变体） |
+| 版本 | 语义化版本，当前 `1.0.1`（`versionCode` 每次递增）；只有一条主线，不要 release/debug/ubwc 变体 |
 | FCL 显示名 | `des` 和 `renderer` 首段都是 `KGSL-Freedreno（OpenGL 4.6）`（全角括号） |
 | 应用名 | `Mesa Freedreno A730 (26.3 UBWC)` |
 | MC 版本 | 不限：`minMCVer`/`maxMCVer` 留空 |
@@ -80,8 +80,9 @@ GL 上下文 profile 也是运行时开关（设置界面二选一，都不选 =
 | `FCL_GL_FORCE_CORE=1` | 强制 Core Profile（4.6 Core） |
 | `FCL_GL_FORCE_COMPAT=1` | 强制 Compatibility Profile（4.6 Compatibility） |
 
-两个同时出现时**都不生效**（UI 互斥，但文件可能被手改）。MC 26.3 的 `#version 140` + UBO
-着色器和 Iris 的 `#version 150 compatibility` 都要求 compatibility。
+两个同时出现时**都不生效**（UI 互斥，但文件可能被手改）。默认透传游戏的请求（MC 26.3 要 Core）。
+Iris 的部分光影包（如 iterationT 的 `lines`）写死 `#version 150 compatibility`，必须 Compatibility；
+MC 自己的 `#version 140` + UBO 在两条 profile 下都只是告警。
 
 ## 改 Mesa 的规矩
 
@@ -118,3 +119,4 @@ GL 上下文 profile 也是运行时开关（设置界面二选一，都不选 =
 | 驱动加载失败 `libdrm.so not found` | 26.3 产物 NEEDED libdrm；静态链接或一起打包 |
 | `eglCreateContext(4.6 core)` 返回 0 / `0x3009` | 没先 `eglBindAPI(EGL_OPENGL_API)`，config 没带 `EGL_OPENGL_BIT` |
 | 只有 UBWC 下花屏 | a7xx 需要显式 `FD_CCU_CLEAN_BLIT_CACHE`；KGSL 没有隐式同步 |
+| `Failed to wait for frame completion` / 偶发长卡 / Core+光影花屏 | `kgsl_pipe_wait()` 曾把纳秒超时当毫秒（v1.0.1 修复）。新增任何等待路径都要按 `fd_pipe_wait_timeout()` 的纳秒语义换算 |

@@ -49,8 +49,8 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | 原版 Minecraft 26.3 | ✅ 正常 | 无花屏、无崩溃；Core / Compatibility 都能跑 |
-| 光影（Iris shader pack） | ✅ 可用 | Chocapic13 V6 Lite 实测可加载；个别包会报 `compatibility profile is not supported`，用「强制 Compatibility Profile」解决 |
-| Core 下的物品图标 | ⚠️ 已知问题 | **Core Profile + 光影 + UBWC** 时偶发图标噪点/透明（非 100% 复现）；`noubwc` 或切 Compatibility 后正常 |
+| 光影（Iris shader pack） | ✅ 可用 | Chocapic13 V6 Lite 等包在 Core 下正常；个别包会报 `compatibility profile is not supported`，用「强制 Compatibility Profile」解决 |
+| Core + 光影 + UBWC | ✅ 已修复 | v1.0.1 前会偶发物品图标噪点/透明，根因是 fence 等待超时单位错误（见下方「修复记录」） |
 | 区块锯齿状空洞 | ℹ️ 原版行为 | 原版「区块构建器：线程化」的官方说明就是“破坏方块时短暂出现图像空洞”，光影下编译慢会更明显 |
 | Adreno 730v3 | ✅ 已验证 | 目标设备（Xiaomi Pad 6 Pro / Android 15 / 内核 5.10） |
 | 其他 Adreno 7xx / 6xx | ❓ 理论可用 | 同一份 `fd6_*` 驱动，但**未实机验证**，见下方说明 |
@@ -205,21 +205,17 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 | `archive/` | 旧版本 / 旧清单 / 日志（不入库） |
 | `build/` | Meson 构建目录（不入库，可由 `BUILD_DIR` 改到别处） |
 
+## 修复记录
+
+| 版本 | 修复 |
+|---|---|
+| v1.0.1 | **KGSL fence 等待超时单位错误**：`fd_pipe_wait_timeout()` 传的是纳秒，被当成毫秒传给 `waittimestamp`，超时放大 100 万倍。表现为偶发长时间卡死、MC 26.3 抛 `Failed to wait for frame completion` 崩溃，以及 **Core + 光影 + UBWC 下的物品图标噪点/透明**。修复后两者都消失。 |
+
 ## 已知问题
 
-- **Core Profile 下的物品图标**：`Core + 光影 + UBWC` 时图集的一部分 sprite 会变成彩色噪点或全透明。
-  **不一定 100% 复现**，目前观察需要同时满足：Core 上下文、开着光影、UBWC 未禁用。
-  实测对照：
-
-  | 组合 | 物品图标 |
-  |---|---|
-  | 原版（无光影）+ Core | ✅ 干净 |
-  | Core + 光影 + UBWC | ⚠️ 偶发噪点/透明 |
-  | Core + 光影 + `noubwc` | ✅ 干净 |
-  | Compatibility（UBWC 开）+ 光影 | ✅ 干净 |
-
-  **临时规避**：勾「强制 Compatibility Profile」，或加 `FD_MESA_DEBUG=noubwc`。
-  说明触发条件落在“core 上下文 + Iris 起作用后的纹理路径”，还在定位。
+- **部分光影包需要 Compatibility Profile**：例如 iterationT 3.2.0 的 `lines` 程序是
+  `#version 150 compatibility`，Core 下编译失败会禁用光影。这类包请勾选「强制 Compatibility Profile」，
+  或换用支持 Core 的光影包（Chocapic13 V6 Lite 实测 Core 下正常）。
 - **区块锯齿空洞**：不是驱动 bug。原版设置里「区块构建器：线程化」的说明就写着
   “附近的区块在并行线程中编译，可能导致破坏方块时短暂出现图像空洞”；开光影时
   编译变慢，空洞停留时间更长。破坏方块会触发区块重建，所以看起来“一破坏就好了”。
@@ -235,10 +231,16 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 <details>
 <summary><b>花屏 / 贴图错乱怎么办？</b></summary>
 
-先在设置里勾 `noubwc`，force-stop FCL 再启动：
+先确认用的是 **v1.0.1 或更新**——v1.0.1 修掉了 fence 等待超时单位错误，
+这之前 Core Profile + 光影下偶发的物品图标噪点/透明就是它引起的。
 
-- 勾上后正常 → 问题在 UBWC 路径，把日志和截图一起发出来；
-- 仍然花屏 → 再试 `sysmem`（排除 GMEM/CCU），或 `flush`（排除同步）。
+如果新版本仍花屏，再按顺序试（每改一次都要 force-stop FCL）：
+
+1. `noubwc`：勾上正常 → 问题在 UBWC 路径；
+2. `sysmem`：正常 → 问题在 GMEM/CCU；
+3. `flush`：正常 → 问题在同步。
+
+把日志和截图一起发出来（低版本 + 花屏的 issue 请先升级再提）。
 
 </details>
 
@@ -248,9 +250,11 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 MC 26.3 请求的是 Core Profile，而 Iris 的着色器写着 `#version 150 compatibility`。
 在插件设置里勾选「强制 Compatibility Profile」，保存后 force-stop FCL 再试。
 
-顺便解决了另一件事：MC 自己的着色器是 `#version 140` + `std140` uniform block，
-在 Core 上下文里属于**非法写法**（Mesa 只警告后强行编译，一次启动会刷 5000+ 条警告），
-在 Compatibility 下才是合法的。所以**开光影建议直接用 Compatibility**。
+注意：`#version 150 compatibility` 是 Iris 侧写死的，驱动无法绕过；换一个
+支持 Core 的光影包，或一直用 Compatibility Profile 即可。
+
+（顺带说明：那些 `#version 140` + `std140` 的警告在两条 profile 下都会出现，
+不是切 Compatibility 就能消掉的，和花屏无关。）
 
 </details>
 
