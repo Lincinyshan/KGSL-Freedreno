@@ -1,37 +1,141 @@
 # gpu-driver — Mesa freedreno (KGSL) for FCL
 
+<img src="plugin/res/mipmap-xxxhdpi/ic_launcher.png" width="96" align="right" alt="icon">
+
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20arm64-lightgrey)
+![GL](https://img.shields.io/badge/OpenGL-4.6%20Core-success)
+![Mesa](https://img.shields.io/badge/Mesa-26.3.0--rc1-orange)
+
+给 [FCL](https://github.com/FCL-Team/FoldCraftLauncher)（Minecraft Java 版启动器）用的
+**OpenGL 驱动插件**：Mesa 26.3 的 EGL + freedreno gallium 驱动 + KGSL 后端，
+通过 ANativeWindow **直出（零拷贝）**，不经过 Zink 之类的翻译层。
+
 > [!NOTE]
 > The project was built entirely with vibecoding.
 
-给 FCL（Minecraft Java 版启动器）用的 **OpenGL 驱动插件**：Mesa 26.3 的 EGL +
-freedreno gallium 驱动 + KGSL 后端，ANativeWindow 直出（零拷贝）。
+简单来说：**纯原生** —— Mesa 的桌面 GL 驱动直接跑在 Adreno 上，
+Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 Vulkan 转译。
 
-> 注：简单来说：__纯原生__
-
-- 目标设备：Adreno 730v3（chip_id `0x07030002`，a7xx_gen1，KGSL）//注：理论上整个7系Adreno都能用 甚至6系（除出Adreno 730v3以外兼容问题不要写issues，无法复现）
-- 插件包名：`pkg.freedreno.kgsl`，版本 `26.3.0-main`（单一版本，无 release/debug 之分）
-- FCL 里显示名：`KGSL-Freedreno（OpenGL 4.6）`
-
-> 非官方项目，与 Mesa、Qualcomm、FCL 均无隶属关系。
+---
 
 ## 目录
 
-| 路径 | 内容 |
+- [特性](#特性)
+- [当前状态](#当前状态)
+- [适用设备](#适用设备)
+- [安装](#安装)
+- [使用](#使用)
+- [调试开关](#调试开关)
+- [构建](#构建)
+- [工作原理](#工作原理)
+- [目录结构](#目录结构)
+- [已知问题](#已知问题)
+- [FAQ](#faq)
+- [来源与许可](#来源与许可)
+
+## 特性
+
+- **零拷贝直出**：`libEGL_freedreno.so` 把 EGL 直接转给 Mesa，窗口 surface 来自
+  `ANativeWindow`，没有每帧回读。
+- **桌面 OpenGL 4.6**：Core / Compatibility 两种 profile 可选，`GL_VENDOR` 为 `freedreno`。
+- **KGSL 后端**：不依赖 DRM 节点，适用于所有使用 `/dev/kgsl-3d0` 的高通设备。
+- **单一版本**：包名 `pkg.freedreno.kgsl`，版本 `26.3.0-main`，没有 debug/release/ubwc 之分。
+- **内置调试开关**：点桌面图标即可打开设置界面，写一个 `fcl_env.txt` 控制驱动的调试项。
+- **可复现构建**：`scripts/setup-build.sh` + `scripts/build-egl.sh` + `plugin/build.sh`。
+
+## 当前状态
+
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| 原版 Minecraft 26.3 | ✅ 正常 | 无花屏、无崩溃，GL 4.6 Core 上下文 |
+| 光影（Iris shader pack） | ⚠️ 待验证 | Iris 的着色器是 `#version 150 compatibility`，需要 Compatibility Profile；开关已提供，实机证据还不充分 |
+| Adreno 730v3 | ✅ 已验证 | 目标设备（Xiaomi Pad 6 Pro / Android 15 / 内核 5.10） |
+| 其他 Adreno 7xx / 6xx | ❓ 理论可用 | 同一份 `fd6_*` 驱动，但**未实机验证**，见下方说明 |
+| 32 位应用 | ❌ 不支持 | 插件只带 `arm64-v8a` |
+| msm DRM 设备 | ❌ 不支持 | 本构建只编了 KGSL 后端 |
+
+## 适用设备
+
+- 目标 GPU：Qualcomm Adreno 730v3（`chip_id = 0x07030002` → `fd_dev_info` 里是
+  **`a7xx_gen1`**，虽然营销名叫 730）
+- 平台：Android + KGSL（`/dev/kgsl-3d0`，**没有 DRM 节点**），已在 Android 15 / 内核 5.10 验证
+
+> [!IMPORTANT]
+> 理论上整个 **Adreno 7xx** 系列都能用，甚至 **6xx**（共用同一份 `fd6_*` 驱动）。
+> 但除 Adreno 730v3 以外我没有设备可以复现问题，**其他机型的兼容问题请不要提 issue**。
+> 换机测试时先用 `tools/gltest` 的 `UBWC-*` 用例自检。
+
+## 安装
+
+1. 从 [Releases](releases) 下载 `MesaFreedreno-26.3-main.apk`（或自行[构建](#构建)）；
+2. 安装：
+
+   ```bash
+   adb install -r MesaFreedreno-26.3-main.apk
+   ```
+
+3. 重启 FCL（安装插件后必须让它重新扫描）：
+
+   ```bash
+   adb shell am force-stop com.tungsten.fcl
+   ```
+
+> [!WARNING]
+> 官方包用维护者私钥签名（证书 SHA-256：
+> `66ab6f193ed3e6d6637d66e0b004a38505b00056f0b7b127da5f1422563362b8`）。
+> 用 debug keystore 自行构建的包**签名不同，覆盖安装会失败**，需要先卸载官方版。
+
+## 使用
+
+打开 FCL → 版本设置 → 渲染器，选择 **`KGSL-Freedreno（OpenGL 4.6）`**，启动游戏。
+
+首次进入游戏后，Minecraft 的调试界面（F3）应该显示：
+
+```text
+OpenGL Vendor:   freedreno
+GL_RENDERER:     Adreno (TM) 730
+GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc1
+```
+
+## 调试开关
+
+桌面点插件图标进入设置界面。勾选后写入：
+
+```text
+/storage/emulated/0/Android/media/pkg.freedreno.kgsl/fcl_env.txt
+```
+
+驱动在 EGL 初始化时（`fcl_load_ab_config()`）读取并 `setenv`。
+**改完必须 force-stop FCL**（让游戏进程重启）才生效。
+
+| 开关 | 等价环境变量 | 作用 |
+|---|---|---|
+| `flush` | `FD_MESA_DEBUG=flush` | 每次 draw 后强制 flush，排查同步问题（很慢） |
+| `notile` | `FD_MESA_DEBUG=notile` | 禁用 tiling |
+| `noubwc` | `FD_MESA_DEBUG=noubwc` | 禁用 UBWC 压缩（排查花屏的第一手段） |
+| `sysmem` | `FD_MESA_DEBUG=sysmem` | 绕过 GMEM，全部渲染到系统内存（很慢，用于排除片上内存问题） |
+| `nobin` | `FD_MESA_DEBUG=nobin` | 禁用硬件 binning |
+| `FCL_NO_FAST_CLEAR` | `FCL_NO_FAST_CLEAR=1` | 关闭 a7xx GMEM fast clear |
+| 强制 Core Profile | `FCL_GL_FORCE_CORE=1` | 强制 4.6 Core |
+| 强制 Compatibility | `FCL_GL_FORCE_COMPAT=1` | 强制 4.6 Compatibility |
+
+> [!TIP]
+> Core / Compatibility 二选一，都不选 = 按游戏的请求；两个同时写 = **都不生效**。
+> MC 26.3 自己的着色器是 `#version 140` + UBO、Iris 的包是 `#version 150 compatibility`，
+> 两者都要求 Compatibility Profile。
+
+## 构建
+
+依赖：
+
+| 组件 | 说明 |
 |---|---|
-| `plugin/` | FCL 插件（唯一一份）：`AndroidManifest.xml`、`java/pkg/freedreno/kgsl/MainActivity.java`（调试开关界面）、`res/` 图标、`build.sh` |
-| `mesa/patches/` | **改过的上游文件快照**（不是 diff）：EGL 平台层、gallium freedreno、`kgsl/` 后端；`MAP` 是文件→路径对照 |
-| `scripts/build-egl.sh` | 编 Mesa 产物到 `dist/`（ninja 复用已有构建目录） |
-| `tools/` | `gltest`（UBWC 自检）、`ab-mc.sh`/`flicker.py`（A/B 与闪烁度量）、`egl_bridge_shim.c`（EGL shim） |
-| `docs/` | `HANDOVER.md`、`NOTES-ubwc-artifacts.md`、`NOTES-turnip-vs-gallium-ubwc.md`、`README-FREEDRENO-EGL.md` |
-| `dist/` | 产物（不入库）：`libEGL_mesa_gl.so`、`libgallium_dri.so`、`*.apk` |
-| `archive/` | 旧版本/旧清单/日志（不入库） |
-| `build/` | Meson 构建目录（不入库，可由 `BUILD_DIR` 改到别处） |
-| `.env.local` | 本机路径覆盖（不入库，见下） |
-
-## 构建 / 打包
-
-依赖：Mesa 26.3.0-rc1 源码、Android NDK r30（API 35）、meson/ninja、Android SDK build-tools。
-静态 `libdrm` 可选（`DEPS_DIR`，其 `lib/pkgconfig` 下要有 `libdrm.pc`）。
+| Mesa 源码 | 26.3.0-rc1（`MESA_SRC`） |
+| Android NDK | r30，含 API 35 sysroot（`NDK_DIR`） |
+| Android SDK | `build-tools`（`aapt2` / `apksigner` / `zipalign`） |
+| meson / ninja | `meson` ≥ 1.3 |
+| 可选 | 静态 `libdrm`（`DEPS_DIR`，其 `lib/pkgconfig` 下要有 `libdrm.pc`） |
 
 ```bash
 # 1) 配置 Mesa 构建目录（只需一次）
@@ -50,39 +154,109 @@ cd plugin && ./build.sh                  # → dist/MesaFreedreno-26.3-main.apk
 本机路径可以写进仓库根的 `.env.local`（`BUILD_DIR=` / `CCACHE_DIR=` …，不入库），
 脚本会先 source 它；显式传入的环境变量优先。
 
-插件构建需要 `plugin/android-29.jar`（Android SDK 里拷）和 `tools/r8.jar`（d8，Google Maven
-`com.android.tools:r8`），两者都不入库。
+插件构建还需要：
 
-**签名**：官方发布包由维护者的私钥签名（证书 SHA-256 指纹
-`66ab6f193ed3e6d6637d66e0b004a38505b00056f0b7b127da5f1422563362b8`，可自行核对）。
-仓库不包含证书与口令，构建时用 `SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`；
-没有则回退 `plugin/debug.keystore` 调试签名——**调试签名的包覆盖不了官方版**，需要先卸载。
+- `plugin/android-29.jar` —— 从 Android SDK 拷贝的 `android.jar`；
+- `tools/r8.jar` —— d8（Google Maven `com.android.tools:r8`）。
 
-## 调试开关
+两者都不入库。签名使用 `SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`，
+没有则回退 `plugin/debug.keystore` 调试签名。
 
-桌面点插件图标进入设置界面，勾选后写
-`/storage/emulated/0/Android/media/pkg.freedreno.kgsl/fcl_env.txt`，
-驱动在 EGL 初始化时（`fcl_load_ab_config()`）读它并 `setenv`。**改完必须 force-stop FCL**。
+## 工作原理
 
-| 开关 | 作用 |
-|---|---|
-| `flush` / `notile` / `noubwc` / `sysmem` / `nobin` | `FD_MESA_DEBUG` 的调试项 |
-| `FCL_NO_FAST_CLEAR` | 强制关闭 a7xx GMEM fast clear |
-| `FCL_GL_FORCE_CORE` / `FCL_GL_FORCE_COMPAT` | 强制 GL 上下文 profile：二选一；都不选 = 按游戏请求；两个都写 = 都不生效 |
+```text
+Minecraft (LWJGL / SDL)
+        │  eglGetDisplay / eglCreateContext ...
+        ▼
+libEGL_freedreno.so        ← 我们打包的 shim：导出完整 EGL ABI
+        │  转发，并强制 EGL_OPENGL_API / 桌面 GL 4.6
+        ▼
+libEGL_mesa_gl.so          ← Mesa 26.3 的 EGL（Android 平台层）
+        │  drmGetVersion() 失败 → 直接 open /dev/kgsl-3d0
+        ▼
+libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
+        │  ioctl(KGSL_GPU_COMMAND) 提交
+        ▼
+/dev/kgsl-3d0              ← Adreno 730v3 (a7xx_gen1)
+```
 
-## 关键实现点
+几个关键点：
 
 - Mesa 26.3 上游删掉了 gallium 的 KGSL 后端，这里用
-  [SolDev69/freedreno-gallium-mesa](https://github.com/SolDev69/freedreno-gallium-mesa) 的
-  24.1.2 版本（相对原版只保留 3 处 26.x 适配，见 `mesa/patches/kgsl/README.md`）。
-- EGL 平台层在 `drmGetVersion()` 失败（KGSL 没有 DRM 节点）时直接 open `/dev/kgsl-3d0`，
-  并把 `LIBGL_DRIVERS_PATH` 指到插件目录。
-- 直出：`libEGL_freedreno.so` 是 shim，转发 EGL 符号到我们的 `libEGL_mesa_gl.so`。
+  [SolDev69/freedreno-gallium-mesa](https://github.com/SolDev69/freedreno-gallium-mesa)
+  的 24.1.2 版本，相对原版只保留 3 处 26.x 适配（见 `mesa/patches/kgsl/README.md`）；
+- EGL 平台层在 `drmGetVersion()` 失败（KGSL 没有 DRM 节点）时回退到 `kgsl_device_new()`，
+  并把 `LIBGL_DRIVERS_PATH` 指到插件目录；
+- 所有改过的上游文件都以**整文件快照**形式放在 `mesa/patches/`，`MAP` 是文件→路径对照。
+
+## 目录结构
+
+| 路径 | 内容 |
+|---|---|
+| `plugin/` | FCL 插件：`AndroidManifest.xml`、`java/pkg/freedreno/kgsl/MainActivity.java`、`res/` 图标、`build.sh` |
+| `mesa/patches/` | 改过的上游文件快照（EGL 平台层、gallium freedreno、`kgsl/` 后端）+ `MAP` |
+| `scripts/` | `setup-build.sh`（meson 配置）、`build-egl.sh`（ninja → dist/） |
+| `tools/` | `gltest`（UBWC 自检）、`ab-mc.sh` / `flicker.py`（A/B 与闪烁度量）、`egl_bridge_shim.c` |
+| `docs/` | `HANDOVER.md`、`NOTES-ubwc-artifacts.md`、`NOTES-turnip-vs-gallium-ubwc.md` 等 |
+| `dist/` | 产物（不入库）：两个 `.so` 与 APK |
+| `archive/` | 旧版本 / 旧清单 / 日志（不入库） |
+| `build/` | Meson 构建目录（不入库，可由 `BUILD_DIR` 改到别处） |
 
 ## 已知问题
 
-见 `docs/NOTES-ubwc-artifacts.md`（UBWC 花屏排查）与
-`docs/NOTES-turnip-vs-gallium-ubwc.md`（与 Turnip 的实现差异）。
+- **Iris 光影**：需要 Compatibility Profile（`#version 150 compatibility`），Core 上下文下
+  会直接编译失败并禁用渲染管线。用设置界面的「强制 Compatibility Profile」可以绕开，
+  但完整验证还没做完。
+- **其他机型**：6xx / 7xx 共用 `fd6_*` 驱动，但 UBWC 相关的修复是针对 a730v3 调的，
+  别的芯片可能暴露新的花屏 —— 这类问题在没有设备的情况下无法复现。
+- **构建系统耦合**：`scripts/` 假设你已经有可用的 Meson 构建目录；从零配置见
+  `scripts/setup-build.sh`。
+- 详细的历史排查见 [`docs/NOTES-ubwc-artifacts.md`](docs/NOTES-ubwc-artifacts.md) 与
+  [`docs/NOTES-turnip-vs-gallium-ubwc.md`](docs/NOTES-turnip-vs-gallium-ubwc.md)。
+
+## FAQ
+
+<details>
+<summary><b>花屏 / 贴图错乱怎么办？</b></summary>
+
+先在设置里勾 `noubwc`，force-stop FCL 再启动：
+
+- 勾上后正常 → 问题在 UBWC 路径，把日志和截图一起发出来；
+- 仍然花屏 → 再试 `sysmem`（排除 GMEM/CCU），或 `flush`（排除同步）。
+
+</details>
+
+<details>
+<summary><b>光影（Iris）加载失败，提示 “compatibility profile is not supported”？</b></summary>
+
+MC 26.3 请求的是 Core Profile，而 Iris 的着色器写着 `#version 150 compatibility`。
+在插件设置里勾选「强制 Compatibility Profile」，保存后 force-stop FCL 再试。
+
+</details>
+
+<details>
+<summary><b>为什么改了设置没反应？</b></summary>
+
+设置写在 `Android/media/pkg.freedreno.kgsl/fcl_env.txt`，只在 **EGL 初始化时**读一次。
+必须 `am force-stop com.tungsten.fcl` 让游戏进程重启。
+
+</details>
+
+<details>
+<summary><b>安装时报签名冲突？</b></summary>
+
+官方包与我用 debug keystore 构建的包签名不同。先卸载旧版：
+`adb uninstall pkg.freedreno.kgsl`，再安装。
+
+</details>
+
+<details>
+<summary><b>能用在别的启动器 / 别的 GPU 上吗？</b></summary>
+
+插件本身只是 Mesa EGL + freedreno，任何能加载第三方 EGL 的环境都可能可用；
+但本项目只针对 FCL + Adreno 730v3 验证过。
+
+</details>
 
 ## 来源与许可
 
@@ -90,6 +264,10 @@ cd plugin && ./build.sh                  # → dist/MesaFreedreno-26.3-main.apk
   `mesa/patches/` 里的文件都保留了原始版权头。
 - **[SolDev69/freedreno-gallium-mesa](https://github.com/SolDev69/freedreno-gallium-mesa)**（MIT）
   — KGSL gallium 后端（`mesa/patches/kgsl/`）。
+- **FCL / PojavLauncher 生态** — 插件的 manifest 约定与加载方式。
 - 本仓库新增的脚本与插件代码 — MIT，见 [LICENSE](LICENSE)。
 
 不包含 Qualcomm 专有代码，也未使用 Qualcomm 商标或图形素材。
+
+> [!NOTE]
+> 非官方项目，与 Mesa、Qualcomm、FCL 均无隶属关系。
