@@ -97,6 +97,8 @@ GL 上下文 profile 也是运行时开关（设置界面二选一，都不选 =
 
 - 用 `ANDROID_SERIAL=...` 指定设备，不要硬编码序列号；先 `adb devices`。
 - 装完插件、改完设置、换完库：必须 `adb shell am force-stop com.tungsten.fcl`。
+  覆盖安装更是必须：`/data/app/~~<hash>` 会变，FCL 不重启就会拿着旧路径
+  `dlopen .../libEGL_freedreno.so` 失败并崩溃。
 - 自检：`tools/gltest`（`UBWC-*` 用例，logcat 标签 `GLTEST`）。
 - A/B：`ANDROID_SERIAL=... tools/ab-mc.sh env "<KEY=VALUE...>"`；`tools/flicker.py` 算闪烁指标。
 - 判据：截图后裁热栏 `convert shot.png -crop 1300x140+880+1650 +repage -resize 300%`。

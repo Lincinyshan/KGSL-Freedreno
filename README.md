@@ -235,6 +235,17 @@ MC 26.3 请求的是 Core Profile，而 Iris 的着色器写着 `#version 150 co
 </details>
 
 <details>
+<summary><b>更新插件后第一次启动就崩，日志说 <code>libEGL_freedreno.so not found</code>？</b></summary>
+
+覆盖安装后 APK 的安装目录会变（`/data/app/~~<hash>/pkg.freedreno.kgsl-<hash>`），
+但 FCL 进程如果没重启，还拿着**上一次安装的旧路径**，于是 dlopen 失败、启动崩溃。
+
+**解决**：装完（或更新完）插件后先 `am force-stop com.tungsten.fcl` 再启动游戏。
+这和 GL profile 开关无关——改设置本来就需要 force-stop，所以看起来像是“勾了 profile 就好了”。
+
+</details>
+
+<details>
 <summary><b>为什么改了设置没反应？</b></summary>
 
 设置写在 `Android/media/pkg.freedreno.kgsl/fcl_env.txt`，只在 **EGL 初始化时**读一次。
