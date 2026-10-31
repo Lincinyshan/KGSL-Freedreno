@@ -50,7 +50,7 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
 |---|---|---|
 | 原版 Minecraft 26.3 | ✅ 正常 | 无花屏、无崩溃；Core / Compatibility 都能跑 |
 | 光影（Iris shader pack） | ✅ 可用 | Chocapic13 V6 Lite 实测可加载；个别包会报 `compatibility profile is not supported`，用「强制 Compatibility Profile」解决 |
-| Core 下的物品图标 | ⚠️ 已知问题 | **Core Profile + UBWC** 时图标会出现噪点/透明；`noubwc` 或切 Compatibility 后正常 |
+| Core 下的物品图标 | ⚠️ 已知问题 | **Core Profile + 光影 + UBWC** 时偶发图标噪点/透明（非 100% 复现）；`noubwc` 或切 Compatibility 后正常 |
 | 区块锯齿状空洞 | ℹ️ 原版行为 | 原版「区块构建器：线程化」的官方说明就是“破坏方块时短暂出现图像空洞”，光影下编译慢会更明显 |
 | Adreno 730v3 | ✅ 已验证 | 目标设备（Xiaomi Pad 6 Pro / Android 15 / 内核 5.10） |
 | 其他 Adreno 7xx / 6xx | ❓ 理论可用 | 同一份 `fd6_*` 驱动，但**未实机验证**，见下方说明 |
@@ -207,10 +207,19 @@ libgallium_dri.so          ← freedreno gallium 驱动（含 KGSL 后端）
 
 ## 已知问题
 
-- **Core Profile 下的物品图标**：`Core + UBWC` 时图集的一部分 sprite 会变成彩色噪点或全透明。
-  实测对照：`Core + noubwc` 干净、`Compatibility`（UBWC 开）也干净，只有
-  `Core + UBWC` 会花 —— 是 MC 在 core 下选的纹理上传路径踩到了我们的 UBWC 上传实现。
+- **Core Profile 下的物品图标**：`Core + 光影 + UBWC` 时图集的一部分 sprite 会变成彩色噪点或全透明。
+  **不一定 100% 复现**，目前观察需要同时满足：Core 上下文、开着光影、UBWC 未禁用。
+  实测对照：
+
+  | 组合 | 物品图标 |
+  |---|---|
+  | 原版（无光影）+ Core | ✅ 干净 |
+  | Core + 光影 + UBWC | ⚠️ 偶发噪点/透明 |
+  | Core + 光影 + `noubwc` | ✅ 干净 |
+  | Compatibility（UBWC 开）+ 光影 | ✅ 干净 |
+
   **临时规避**：勾「强制 Compatibility Profile」，或加 `FD_MESA_DEBUG=noubwc`。
+  说明触发条件落在“core 上下文 + Iris 起作用后的纹理路径”，还在定位。
 - **区块锯齿空洞**：不是驱动 bug。原版设置里「区块构建器：线程化」的说明就写着
   “附近的区块在并行线程中编译，可能导致破坏方块时短暂出现图像空洞”；开光影时
   编译变慢，空洞停留时间更长。破坏方块会触发区块重建，所以看起来“一破坏就好了”。
