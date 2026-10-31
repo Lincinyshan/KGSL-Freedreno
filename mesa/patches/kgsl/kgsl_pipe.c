@@ -114,7 +114,21 @@ static int
 kgsl_pipe_wait(struct fd_pipe *pipe, const struct fd_fence *fence, uint64_t timeout)
 {
     struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
-    return wait_timestamp_safe(pipe->dev->fd, kgsl_pipe->queue_id, fence->kfence, timeout);
+    int64_t timeout_ms;
+
+    /* fd_pipe_funcs.wait() 的 timeout 是纳秒（freedreno_drmif.h: "timeout in
+     * nanosec"），KGSL 的 waittimestamp 用的是毫秒。直接透传会把超时放大
+     * 100 万倍，表现为随机长时间卡死 / 上层超时抛异常。
+     */
+    if (timeout == ~0ULL) {
+        timeout_ms = 0x7fffffff;
+    } else {
+        timeout_ms = DIV_ROUND_UP(timeout, 1000000ULL);
+        timeout_ms = MIN2(timeout_ms, 0x7fffffff);
+    }
+
+    return wait_timestamp_safe(pipe->dev->fd, kgsl_pipe->queue_id, fence->kfence,
+                               timeout_ms);
 }
 
 static void
