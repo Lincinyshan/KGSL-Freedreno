@@ -1,6 +1,12 @@
 # Turnip(Vulkan) vs freedreno-Gallium(OpenGL)：UBWC 实现差异对照
 
-纯源码分析，未上机。对象是同一棵 Mesa 26.3.0-rc1 树：
+> **复核结论（2026-11-01）**：本文是纯源码分析，D1–D11 仍然成立，但**实际的花屏根因不是
+> UBWC**——是 KGSL 后端的 fence 等待超时单位错误（纳秒当毫秒），v1.0.1 修复后
+> Core + 光影 + UBWC 下的图标噪点/透明全部消失（见 `docs/NOTES-ubwc-artifacts.md`）。
+> 文中的 D2/D4/D6/D10 加固改动仍然保留在树里（作为正确性修补），不要因为“问题已修”
+> 就把它们回滚。
+
+纯源码分析，未上机。对象是同一棵 Mesa 26.3.0-rc3 树：
 
     src/freedreno/vulkan/…            Turnip
     src/gallium/drivers/freedreno/…   我们的 GL 驱动
@@ -197,6 +203,5 @@ Turnip 在 a6xx 上因此走的是"mutable 图干脆不给 UBWC"，`layout.is_mu
 比较成立、状态被正确标脏；shadow 里原来那句（换完之后再 rebind）删掉。
 `rebind_resource()` 只置脏位，真正的 emit 在后续 draw 时才发生，那时读的是新 BO，顺序安全。
 
-构建：`ninja -C exp-opengl-driver/gl_workdir/build-egl-26.3` 通过，产物已放到
-`release-26.3.0-rc1-a730-egl/`（`libgallium_dri.so` sha256 `ff2029ab…`），
-改过的源文件同步进了 `patches/egl263/`。
+构建：`scripts/build-egl.sh` 通过，产物在 `dist/`（v1.0.2 的
+`libgallium_dri.so` sha256 `3a09a6cd…`），改过的源文件同步在 `mesa/patches/`。
