@@ -9,6 +9,8 @@ Mesa 26.3 的 EGL + **freedreno gallium 驱动** + **KGSL 后端**，打包成 F
 
 - 目标 GPU：Qualcomm Adreno 730v3，`chip_id = 0x07030002` → `fd_dev_info` 里是
   **`a7xx_gen1`**（不是 a6xx，虽然营销名是 730）
+- 支持范围：Adreno **6xx / 7xx / 8xx**（Mesa 上游 `freedreno_devices.py` 里有、且是 KGSL 平台）；
+  已实测 Adreno 730v3，其他型号理论上可用，UBWC 细节未验证
 - 目标平台：Android + KGSL（`/dev/kgsl-3d0`，**没有 DRM 节点**）。已在 Android 15 /
   内核 5.10 的 Xiaomi Pad 6 Pro 上验证，理论上适用于同代 KGSL 设备
 - 上游：Mesa 26.3.0-rc3。这是**下游 fork**，产物只做 FCL 插件，不往上游提 MR
