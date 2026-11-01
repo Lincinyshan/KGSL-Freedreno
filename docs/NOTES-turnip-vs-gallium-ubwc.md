@@ -11,7 +11,7 @@
     src/freedreno/vulkan/…            Turnip
     src/gallium/drivers/freedreno/…   我们的 GL 驱动
     src/freedreno/fdl/…               两边共用的 layout / 描述符库
-    src/freedreno/drm/…               gallium 的 BO 层（含我们从 25.0.7 移植回来的 kgsl）
+    src/freedreno/drm/…               gallium 的 BO 层（含从 SolDev69 fork 移植的 kgsl）
 
 ## 0. 结论速览
 
