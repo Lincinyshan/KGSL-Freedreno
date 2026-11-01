@@ -40,8 +40,10 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
   `ANativeWindow`，没有每帧回读。
 - **桌面 OpenGL 4.6**：Core / Compatibility 两种 profile 可选，`GL_VENDOR` 为 `freedreno`。
 - **KGSL 后端**：不依赖 DRM 节点，适用于所有使用 `/dev/kgsl-3d0` 的高通设备。
-- **单一版本**：包名 `pkg.freedreno.kgsl`，版本 `26.3.0-main`，没有 debug/release/ubwc 之分。
-- **内置调试开关**：点桌面图标即可打开设置界面，写一个 `fcl_env.txt` 控制驱动的调试项。
+- **单一版本**：包名 `pkg.freedreno.kgsl`，语义化版本（当前 `1.0.3`），只有一个发布线。
+- **新 UI 设置界面（零依赖）**：纯 `android.widget`，不引入第三方库；
+  API 31+ 用系统动态调色板取色，低版本回退固定色。扁平列表（分区标题 + 整行可点），
+  顶栏右上角齿轮切「配置 / 设置」，设置页可切语言（跟随系统 / 简体中文 / English）。
 - **可复现构建**：`scripts/setup-build.sh` + `scripts/build-egl.sh` + `plugin/build.sh`。
 
 ## 当前状态

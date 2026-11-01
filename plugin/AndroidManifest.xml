@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="pkg.freedreno.kgsl"
-    android:versionCode="3"
-    android:versionName="1.0.2">
+    android:versionCode="4"
+    android:versionName="1.0.3">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -14,6 +14,7 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="Mesa Freedreno A730 (26.3 UBWC)"
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
         android:hasCode="true"
         android:extractNativeLibs="true"
         android:allowBackup="false">

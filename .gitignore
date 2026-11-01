@@ -37,3 +37,7 @@
 /.tmp-shots/
 /.shot-*.png
 /.screenshot-tmp*.png
+
+# 旧依赖目录（已不再使用，不入库）
+/plugin/libs-androidx/
+/plugin/libs-compose/

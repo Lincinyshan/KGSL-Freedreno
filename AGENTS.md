@@ -48,8 +48,16 @@ scripts/build-egl.sh                            # ninja → dist/libEGL_mesa_gl.
 cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-main.apk
 ```
 
-- 插件构建依赖 `plugin/android-29.jar`（Android SDK 里的 `android.jar`）和
-  `tools/r8.jar`（Google Maven `com.android.tools:r8`）。两者都不入库，缺失时脚本会报错。
+- 插件构建依赖：只有 `tools/r8.jar`（d8，Google Maven `com.android.tools:r8`）。
+  aapt2 用系统 build-tools（脚本回退到 PATH 里的 aapt2），链接用 `plugin/android-29.jar`。
+  **不需要任何额外依赖**。
+- 插件 UI：**纯 android.widget，不依赖任何第三方库**（1.0.3 起，APK ~5.6 MB）。
+  主题 `@android:style/Theme.DeviceDefault.Light.NoActionBar`；界面取色来自
+  API 31+ 的系统调色板（`getIdentifier("system_accent1_500", "color", "android")` 等），
+  文本/背景用主题色（`textColorPrimary`/`colorBackground`）保证可读，低版本回退固定色。
+  布局：顶栏标题 + 右上角齿轮切「配置/设置」两页；扁平列表（分区标题 + 行：标题/副标题 + 原生 Switch），
+  **整行可点**；底部「清空 + 保存」按钮。设置页只有语言（SharedPreferences）。
+  构建走 `build.sh` 的 Java 分支：javac 只编 `plugin/java`，d8 不带任何外部 jar。
 - 签名：官方包用维护者私钥（`SIGNING_CERTS_DIR` 指向的 `codesign/codesign.p12`，
   口令从同目录 `passwords.txt` 读）；没有证书时回退 `plugin/debug.keystore`，
   那是调试签名，**和官方版不兼容**（签名不同，覆盖安装会失败）。**不要提交证书/口令**。
@@ -61,7 +69,7 @@ cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-ma
 | 项 | 值 |
 |---|---|
 | package | `pkg.freedreno.kgsl`（单一包名） |
-| 版本 | 语义化版本，当前 `1.0.2`（`versionCode` 每次递增）；只有一条主线，不要 release/debug/ubwc 变体 |
+| 版本 | 语义化版本，当前 `1.0.3`（`versionCode` 每次递增）；只有一条主线，不要 release/debug/ubwc 变体 |
 | FCL 显示名 | `des` 和 `renderer` 首段都是 `KGSL-Freedreno（OpenGL 4.6）`（全角括号） |
 | 应用名 | `Mesa Freedreno A730 (26.3 UBWC)` |
 | MC 版本 | 不限：`minMCVer`/`maxMCVer` 留空 |

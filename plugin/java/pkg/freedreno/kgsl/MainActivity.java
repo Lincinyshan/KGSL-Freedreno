@@ -1,14 +1,21 @@
 package pkg.freedreno.kgsl;
 
 import android.app.Activity;
-import android.content.pm.PackageManager;
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,242 +24,348 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
- * KGSL-Freedreno（OpenGL 4.6）插件的调试开关界面。
+ * KGSL-Freedreno（OpenGL 4.6）设置界面。
  *
- * 调试开关：FD_MESA_DEBUG 各项、fast clear、GL profile（core/compat 二选一）。
- * 设置写到本应用自己的 Android/media 目录（跨应用可读、写入不需要
- * 「所有文件访问」权限），驱动在 EGL 初始化时读同一个文件：
- *   /storage/emulated/0/Android/media/<包名>/fcl_env.txt
- * 改完必须 force-stop FCL（或杀进程）再启动游戏才生效。
+ * 不依赖任何第三方库：纯 android.widget + 系统调色板
+ * （API 31+ 用系统动态色，低版本回退固定色）。
+ * 极简扁平列表：分区标题 + 行（标题/副标题 + 开关），整行可点。
+ * 设置写到 Android/media/<包名>/fcl_env.txt，改完 force-stop FCL 生效。
  */
 public class MainActivity extends Activity {
     private static final String FILE_NAME = "fcl_env.txt";
+    private static final String PREFS = "fcl_ui";
 
-    private CheckBox cbFlush, cbNotile, cbNoubwc, cbNoFastClear, cbSysmem, cbNobin;
-    private CheckBox cbForceCore, cbForceCompat;
-    private TextView status;
+    private int accent, accentDark, onSurface, onSurfaceVariant, background, trackOff;
+    private LinearLayout content, bottomBar;
+    private TextView titleView;
+    private boolean settingsPage;
+    private int lang;
+
+    private boolean flush, notile, noubwc, sysmem, nobin, noFastClear, forceCore, forceCompat;
+
+    private int dp(float v) { return (int) (v * getResources().getDisplayMetrics().density + 0.5f); }
+
+    private boolean zh() {
+        int l = lang;
+        if (l == 0) {
+            String code = Locale.getDefault().getLanguage();
+            l = (code != null && code.startsWith("zh")) ? 1 : 2;
+        }
+        return l == 1;
+    }
+
+    private String t(String z, String e) { return zh() ? z : e; }
+
+    private int sysColor(String name, int fallback) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            int id = getResources().getIdentifier(name, "color", "android");
+            if (id != 0) {
+                try { return getColor(id); } catch (Throwable ignored) { }
+            }
+        }
+        return fallback;
+    }
+
+    private int themeColor(int attr, int fallback) {
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(attr, tv, true)) {
+            if (tv.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT
+                    && tv.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT) {
+                return tv.data;
+            }
+            if (tv.resourceId != 0) {
+                try { return getColor(tv.resourceId); } catch (Throwable ignored) { }
+            }
+        }
+        return fallback;
+    }
+
+    private void initColors() {
+        // 文本/背景用主题色，保证任何 ROM/深浅色下都可读；强调色尽量用系统动态色
+        accent = sysColor("system_accent1_500", themeColor(android.R.attr.colorAccent, 0xFF6750A4));
+        accentDark = sysColor("system_accent1_600", themeColor(android.R.attr.colorAccent, 0xFF4F378B));
+        onSurface = themeColor(android.R.attr.textColorPrimary, 0xFF1C1B1F);
+        onSurfaceVariant = themeColor(android.R.attr.textColorSecondary, 0xFF49454F);
+        background = themeColor(android.R.attr.colorBackground, 0xFFF7F2FA);
+        trackOff = sysColor("system_neutral2_300", 0xFFCAC4D0);
+    }
 
     private File envFile() {
-        File[] dirs = getExternalMediaDirs();
-        File dir = (dirs != null && dirs.length > 0 && dirs[0] != null)
-                ? dirs[0] : getExternalFilesDir(null);
-        return new File(dir, FILE_NAME);
+        return new File(android.os.Environment.getExternalStorageDirectory(),
+                "Android/media/" + getPackageName() + "/" + FILE_NAME);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        initColors();
+        // 兼容旧版界面写入的 String（"SYSTEM"/"ZH"/"EN"）
+        Object savedLang = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getAll().get("lang");
+        if (savedLang instanceof Integer) {
+            lang = (Integer) savedLang;
+        } else if (savedLang instanceof String) {
+            String v = (String) savedLang;
+            lang = v.equals("ZH") ? 1 : (v.equals("EN") ? 2 : 0);
+        } else {
+            lang = 0;
+        }
+        load();
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(16);
-        root.setPadding(pad, pad, pad, pad);
+        root.setBackgroundColor(background);
+        root.setFitsSystemWindows(true);
 
-        TextView title = new TextView(this);
-        title.setTextSize(16f);
-        title.setText("KGSL-Freedreno（OpenGL 4.6）· 调试开关\n"
-                + "写入：" + envFile().getAbsolutePath() + "\n"
-                + "改完要 force-stop FCL，再启动游戏");
-        root.addView(title);
-
-        cbFlush = addCheck(root, "flush —— 每次 draw 后强制 flush（排查同步问题）");
-        cbNotile = addCheck(root, "notile —— 禁用 tiling");
-        cbNoubwc = addCheck(root, "noubwc —— 禁用 UBWC");
-        cbNoFastClear = addCheck(root, "FCL_NO_FAST_CLEAR —— 禁用 GMEM fast clear");
-        cbSysmem = addCheck(root, "sysmem —— 全部走 sysmem 渲染");
-        cbNobin = addCheck(root, "nobin —— 禁用硬件 binning");
-
-        // GL profile 二选一（都不选 = 按游戏的请求走）
-        cbForceCore = addCheck(root, "强制 Core Profile —— 严格现代 GL（Iris shader pack 会编译失败）");
-        cbForceCompat = addCheck(root, "强制 Compatibility Profile —— 保留旧特性（MC 26.3 的 140 着色器与 Iris 都需要）");
-        cbForceCore.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (cbForceCore.isChecked()) cbForceCompat.setChecked(false);
-            }
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(20), dp(16), dp(8), dp(8));
+        titleView = new TextView(this);
+        titleView.setTextSize(28f);
+        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        titleView.setTextColor(onSurface);
+        header.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView gear = new TextView(this);
+        gear.setText("⚙");
+        gear.setTextSize(22f);
+        gear.setTextColor(onSurfaceVariant);
+        gear.setPadding(dp(12), dp(8), dp(12), dp(8));
+        gear.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { settingsPage = !settingsPage; render(); }
         });
-        cbForceCompat.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (cbForceCompat.isChecked()) cbForceCore.setChecked(false);
-            }
-        });
+        header.addView(gear);
+        root.addView(header);
 
-        Button save = new Button(this);
-        save.setText("保存");
-        save.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { save(); }
-        });
-        root.addView(save);
+        ScrollView scroll = new ScrollView(this);
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(content);
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        Button clear = new Button(this);
-        clear.setText("清空（删除配置文件）");
-        clear.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { clear(); }
-        });
-        root.addView(clear);
+        bottomBar = new LinearLayout(this);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomBar.setPadding(dp(20), dp(8), dp(20), dp(16));
+        root.addView(bottomBar);
 
-        status = new TextView(this);
-        status.setTextSize(12f);
-        status.setPadding(0, dp(12), 0, 0);
-        root.addView(status);
+        setContentView(root);
+        render();
+    }
 
-        ScrollView sv = new ScrollView(this);
-        sv.addView(root);
-        setContentView(sv);
+    private interface Setter { void set(boolean v); }
 
-        if (Build.VERSION.SDK_INT < 29
-                && checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                   != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[] { android.Manifest.permission.WRITE_EXTERNAL_STORAGE }, 1);
+    private void render() {
+        titleView.setText(settingsPage ? t("设置", "Settings") : t("配置", "Config"));
+        content.removeAllViews();
+        bottomBar.removeAllViews();
+        bottomBar.setVisibility(settingsPage ? View.GONE : View.VISIBLE);
+
+        if (!settingsPage) {
+            section(t("驱动调试", "Driver debug"));
+            toggle("flush", t("每次 draw 后强制 flush（排查同步问题，很慢）", "Force flush after each draw (slow)"), flush,
+                    new Setter() { public void set(boolean v) { flush = v; } });
+            toggle("notile", t("禁用 tiling", "Disable tiling"), notile, new Setter() { public void set(boolean v) { notile = v; } });
+            toggle("noubwc", t("禁用 UBWC 压缩（排查花屏首选）", "Disable UBWC (try first for artifacts)"), noubwc,
+                    new Setter() { public void set(boolean v) { noubwc = v; } });
+            toggle("sysmem", t("绕过 GMEM，全部渲染到系统内存（很慢）", "Bypass GMEM (very slow)"), sysmem,
+                    new Setter() { public void set(boolean v) { sysmem = v; } });
+            toggle("nobin", t("禁用硬件 binning", "Disable hardware binning"), nobin,
+                    new Setter() { public void set(boolean v) { nobin = v; } });
+            section(t("其他", "Other"));
+            toggle("FCL_NO_FAST_CLEAR", t("关闭 a7xx GMEM fast clear", "Disable a7xx GMEM fast clear"), noFastClear,
+                    new Setter() { public void set(boolean v) { noFastClear = v; } });
+            section("GL Profile");
+            toggle(t("强制 Core Profile", "Force Core Profile"), t("严格现代 GL；部分光影包会编译失败", "Modern GL only; some packs fail"), forceCore,
+                    new Setter() { public void set(boolean v) { forceCore = v; if (v) forceCompat = false; } });
+            toggle(t("强制 Compatibility Profile", "Force Compatibility Profile"), t("保留旧特性；兼容性更好", "Legacy features; better compatibility"), forceCompat,
+                    new Setter() { public void set(boolean v) { forceCompat = v; if (v) forceCore = false; } });
+            section(t("状态", "Status"));
+            TextView status = new TextView(this);
+            status.setTextSize(12f);
+            status.setTextColor(onSurfaceVariant);
+            status.setPadding(dp(20), dp(4), dp(20), dp(8));
+            status.setText(envFile().getAbsolutePath() + "\n" + readText());
+            content.addView(status);
+
+            Button clear = new Button(this);
+            clear.setText(t("清空", "Clear"));
+            clear.setBackgroundColor(Color.TRANSPARENT);
+            clear.setTextColor(accentDark);
+            clear.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { clearAll(); }
+            });
+            bottomBar.addView(clear);
+            bottomBar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+            Button save = new Button(this);
+            save.setText(t("保存", "Save"));
+            save.setTextColor(Color.WHITE);
+            save.setBackgroundTintList(ColorStateList.valueOf(accent));
+            save.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { save(); }
+            });
+            bottomBar.addView(save);
+        } else {
+            section(t("常规", "General"));
+            radio(t("跟随系统", "Follow system"), 0);
+            radio(t("简体中文", "简体中文"), 1);
+            radio("English", 2);
+            section(t("关于", "About"));
+            TextView about = new TextView(this);
+            about.setTextSize(14f);
+            about.setTextColor(onSurfaceVariant);
+            about.setPadding(dp(20), dp(4), dp(20), dp(8));
+            about.setText("KGSL-Freedreno · 1.0.3");
+            content.addView(about);
         }
-
-        load();
     }
 
-    private CheckBox addCheck(LinearLayout root, String text) {
-        CheckBox cb = new CheckBox(this);
-        cb.setText(text);
-        cb.setTextSize(14f);
-        root.addView(cb);
-        return cb;
+    private void section(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(13f);
+        tv.setTextColor(accentDark);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setPadding(dp(20), dp(20), dp(20), dp(4));
+        content.addView(tv);
     }
 
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
+    private void toggle(String title, String subtitle, boolean checked, final Setter setter) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(20), dp(10), dp(20), dp(10));
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        TextView t1 = new TextView(this);
+        t1.setText(title);
+        t1.setTextSize(16f);
+        t1.setTextColor(onSurface);
+        texts.addView(t1);
+        TextView t2 = new TextView(this);
+        t2.setText(subtitle);
+        t2.setTextSize(13f);
+        t2.setTextColor(onSurfaceVariant);
+        texts.addView(t2);
+        row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        final Switch sw = new Switch(this);
+        sw.setChecked(checked);
+        sw.setThumbTintList(new ColorStateList(
+                new int[][] { { android.R.attr.state_checked }, {} },
+                new int[] { Color.WHITE, trackOff }));
+        sw.setTrackTintList(new ColorStateList(
+                new int[][] { { android.R.attr.state_checked }, {} },
+                new int[] { accent, trackOff }));
+        sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(CompoundButton b, boolean v) { setter.set(v); }
+        });
+        row.addView(sw);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { sw.setChecked(!sw.isChecked()); }
+        });
+        content.addView(row);
     }
 
-    private void toast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_LONG).show();
-    }
-
-    private String readFile() {
-        StringBuilder sb = new StringBuilder();
-        File f = envFile();
-        if (f == null || !f.exists())
-            return "";
-        try (BufferedReader r = new BufferedReader(
-                new InputStreamReader(new FileInputStream(f), "UTF-8"))) {
-            String line;
-            while ((line = r.readLine()) != null) {
-                sb.append(line).append('\n');
+    private void radio(String label, final int value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(20), dp(10), dp(20), dp(10));
+        TextView tv = new TextView(this);
+        tv.setText(label);
+        tv.setTextSize(16f);
+        tv.setTextColor(onSurface);
+        row.addView(tv, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        final RadioButton rb = new RadioButton(this);
+        rb.setChecked(lang == value);
+        rb.setClickable(false);
+        rb.setFocusable(false);
+        row.addView(rb);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                lang = value;
+                getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt("lang", value).apply();
+                render();
             }
-        } catch (Throwable ignored) {
-        }
-        return sb.toString();
+        });
+        content.addView(row);
     }
 
     private void load() {
-        String content = readFile();
-
-        boolean flush = false, notile = false, noubwc = false, sysmem = false, nobin = false;
-        boolean noFc = false, forceCore = false, forceCompat = false;
-        for (String line : content.split("\n")) {
+        for (String line : readText().split("\n")) {
             line = line.trim();
             if (line.startsWith("FD_MESA_DEBUG=")) {
-                for (String f : line.substring("FD_MESA_DEBUG=".length()).split(",")) {
-                    f = f.trim();
-                    if (f.equals("flush")) flush = true;
-                    else if (f.equals("notile")) notile = true;
-                    else if (f.equals("noubwc")) noubwc = true;
-                    else if (f.equals("sysmem")) sysmem = true;
-                    else if (f.equals("nobin")) nobin = true;
-                }
+                String v = line.substring("FD_MESA_DEBUG=".length());
+                flush = v.contains("flush");
+                notile = v.contains("notile");
+                noubwc = v.contains("noubwc");
+                sysmem = v.contains("sysmem");
+                nobin = v.contains("nobin");
             } else if (line.startsWith("FCL_NO_FAST_CLEAR=")) {
-                String v = line.substring("FCL_NO_FAST_CLEAR=".length()).trim();
-                noFc = !v.isEmpty() && !v.equals("0");
+                noFastClear = true;
             } else if (line.startsWith("FCL_GL_FORCE_CORE=")) {
-                String v = line.substring("FCL_GL_FORCE_CORE=".length()).trim();
-                forceCore = !v.isEmpty() && !v.equals("0");
+                forceCore = true;
             } else if (line.startsWith("FCL_GL_FORCE_COMPAT=")) {
-                String v = line.substring("FCL_GL_FORCE_COMPAT=".length()).trim();
-                forceCompat = !v.isEmpty() && !v.equals("0");
+                forceCompat = true;
             }
         }
-
-        boolean profileConflict = forceCore && forceCompat;
-        if (profileConflict) {
-            forceCore = false;
-            forceCompat = false;
-        }
-
-        cbFlush.setChecked(flush);
-        cbNotile.setChecked(notile);
-        cbNoubwc.setChecked(noubwc);
-        cbNoFastClear.setChecked(noFc);
-        cbSysmem.setChecked(sysmem);
-        cbNobin.setChecked(nobin);
-        cbForceCore.setChecked(forceCore);
-        cbForceCompat.setChecked(forceCompat);
-
-        updateStatus(profileConflict
-                ? content + "\n# 注意：FCL_GL_FORCE_CORE 与 FCL_GL_FORCE_COMPAT 同时存在，两者都不生效\n"
-                : content);
+        if (forceCore && forceCompat) { forceCore = false; forceCompat = false; }
     }
 
-    private void updateStatus(String content) {
-        StringBuilder sb = new StringBuilder();
+    private String readText() {
         File f = envFile();
-        sb.append("路径：").append(f.getAbsolutePath()).append('\n');
-        sb.append("可写：").append(f.getParentFile() != null && f.getParentFile().canWrite() ? "是" : "否").append('\n');
-        sb.append("当前内容：\n").append(content.isEmpty() ? "(空/不存在)" : content);
-        status.setText(sb.toString());
+        if (!f.exists()) return "";
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line).append('\n');
+            return sb.toString();
+        } catch (Throwable e) {
+            return "";
+        }
     }
 
     private void save() {
-        StringBuilder dbg = new StringBuilder();
-        if (cbFlush.isChecked()) dbg.append("flush,");
-        if (cbNotile.isChecked()) dbg.append("notile,");
-        if (cbNoubwc.isChecked()) dbg.append("noubwc,");
-        if (cbSysmem.isChecked()) dbg.append("sysmem,");
-        if (cbNobin.isChecked()) dbg.append("nobin,");
-
-        StringBuilder out = new StringBuilder();
-        out.append("# KGSL-Freedreno（OpenGL 4.6）插件设置，由 MainActivity 写入\n");
-        out.append("# force-stop FCL 后生效\n");
-        if (dbg.length() > 0) {
-            dbg.setLength(dbg.length() - 1);
-            out.append("FD_MESA_DEBUG=").append(dbg).append('\n');
+        Map<String, String> values = new LinkedHashMap<>();
+        List<String> dbg = new ArrayList<>();
+        if (flush) dbg.add("flush");
+        if (notile) dbg.add("notile");
+        if (noubwc) dbg.add("noubwc");
+        if (sysmem) dbg.add("sysmem");
+        if (nobin) dbg.add("nobin");
+        if (!dbg.isEmpty()) values.put("FD_MESA_DEBUG", String.join(",", dbg));
+        if (noFastClear) values.put("FCL_NO_FAST_CLEAR", "1");
+        if (forceCore != forceCompat) {
+            values.put(forceCore ? "FCL_GL_FORCE_CORE" : "FCL_GL_FORCE_COMPAT", "1");
         }
-        if (cbNoFastClear.isChecked())
-            out.append("FCL_NO_FAST_CLEAR=1\n");
-        // 二选一：万一两个都被勾上，则都不写（与驱动的冲突处理一致）
-        if (cbForceCore.isChecked() != cbForceCompat.isChecked()) {
-            if (cbForceCore.isChecked())
-                out.append("FCL_GL_FORCE_CORE=1\n");
-            else
-                out.append("FCL_GL_FORCE_COMPAT=1\n");
-        }
-
-        File f = envFile();
-        try {
-            File dir = f.getParentFile();
-            if (dir != null && !dir.exists() && !dir.mkdirs())
-                throw new Exception("mkdirs failed: " + dir);
-            try (OutputStreamWriter w = new OutputStreamWriter(
-                    new FileOutputStream(f), "UTF-8")) {
-                w.write(out.toString());
-            }
-            toast("已写入 " + f.getAbsolutePath());
-        } catch (Throwable t) {
-            toast("写入失败：" + t.getMessage());
-        }
-        updateStatus(readFile());
+        write(values);
+        Toast.makeText(this, t("已保存", "Saved"), Toast.LENGTH_SHORT).show();
+        render();
     }
 
-    private void clear() {
+    private void clearAll() {
+        flush = notile = noubwc = sysmem = nobin = noFastClear = forceCore = forceCompat = false;
+        write(new LinkedHashMap<String, String>());
+        render();
+    }
+
+    private void write(Map<String, String> values) {
         File f = envFile();
-        boolean ok = !f.exists() || f.delete();
-        toast(ok ? "已删除 " + f.getAbsolutePath() : "删除失败：" + f.getAbsolutePath());
-        cbFlush.setChecked(false);
-        cbNotile.setChecked(false);
-        cbNoubwc.setChecked(false);
-        cbNoFastClear.setChecked(false);
-        cbSysmem.setChecked(false);
-        cbNobin.setChecked(false);
-        cbForceCore.setChecked(false);
-        cbForceCompat.setChecked(false);
-        updateStatus(readFile());
+        File dir = f.getParentFile();
+        if (dir != null && !dir.exists()) dir.mkdirs();
+        try (FileOutputStream out = new FileOutputStream(f)) {
+            out.write("# KGSL-Freedreno (OpenGL 4.6) settings, written by MainActivity\n".getBytes("UTF-8"));
+            out.write("# takes effect after force-stopping FCL\n".getBytes("UTF-8"));
+            for (Map.Entry<String, String> e : values.entrySet()) {
+                out.write((e.getKey() + "=" + e.getValue() + "\n").getBytes("UTF-8"));
+            }
+        } catch (Throwable e) {
+            Toast.makeText(this, "write failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 }

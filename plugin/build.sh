@@ -1,9 +1,9 @@
 #!/bin/bash -e
-# 打包 EGL 直出版 FCL 插件：shim(libEGL_freedreno.so) + 真 libEGL + libgallium_dri
+# 打包 FCL 插件：shim + 真 libEGL + libgallium_dri + 新 UI(Java)
+
 #
 #   lib   : ../dist/{libEGL_mesa_gl.so,libgallium_dri.so}
 #   out   : ../dist/<APK_NAME>.apk
-#   res   : res/mipmap-*/ic_launcher.png（由 icon/make-icon.py 生成）
 #   sign  : signing-certs/codesign/codesign.p12，缺失时回退 debug keystore
 #
 # 证书目录可用 SIGNING_CERTS_DIR 覆盖，口令用 KEYSTORE_PASSWORD 覆盖，
@@ -13,16 +13,17 @@ repo="$(cd "$script_dir/.." && pwd)"
 [ -f "$repo/.env.local" ] && . "$repo/.env.local"
 ndk="$repo/android-ndk-r30"; [ -n "$NDK_DIR" ] && ndk="$NDK_DIR"
 libdir="$script_dir/../dist"; [ -n "$LIBDIR" ] && libdir="$LIBDIR"
-jar="$script_dir/android-29.jar"; [ -n "$ANDROID_JAR" ] && jar="$ANDROID_JAR"
 out="${OUT_DIR:-$script_dir/out}"
 name="${APK_NAME:-MesaFreedreno-26.3-main}"
 manifest="${MANIFEST_OVERRIDE:-AndroidManifest.xml}"
 distdir="${DIST_DIR:-$script_dir/../dist}"
 cc="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
 
+aapt2=aapt2
+androidjar="$script_dir/android-29.jar"
+
 [ -f "$libdir/libEGL_mesa_gl.so" ] || { echo "missing $libdir/libEGL_mesa_gl.so"; exit 1; }
 [ -f "$libdir/libgallium_dri.so" ] || { echo "missing $libdir/libgallium_dri.so"; exit 1; }
-[ -f "$jar" ] || { echo "missing $jar"; exit 1; }
 
 rm -rf "$out"; mkdir -p "$out/apk/lib/arm64-v8a"
 cp "$libdir/libEGL_mesa_gl.so" "$libdir/libgallium_dri.so" "$out/apk/lib/arm64-v8a/"
@@ -66,34 +67,36 @@ echo "shim exports OK: $(echo $required | wc -w) required symbols present"
 
 cd "$script_dir"
 
-# 1) resources (launcher icon)
-aapt2 compile --dir res -o "$out/res.zip"
-aapt2 link -o "$out/base.apk" -I "$jar" \
-    --manifest "$manifest" \
-    --min-sdk-version 26 --target-sdk-version 34 \
-    "$out/res.zip"
+# 1) 资源
+    rm -rf "$out/flat" "$out/gen"; mkdir -p "$out/flat" "$out/gen"
+    "$aapt2" compile --dir res -o "$out/flat/zz_ours.zip"
+    "$aapt2" link -o "$out/base.apk" -I "$androidjar" \
+        --manifest "$manifest" \
+        --min-sdk-version 26 --target-sdk-version 34 \
+        "$out/flat/zz_ours.zip"
 
 # 2) native libs
 ( cd "$out/apk" && zip -qr ../base.apk lib )
 
-# 2b) java -> classes.dex（可选：存在 java/ 源码时编译）
-if [ -d "$script_dir/java" ]; then
-    r8_jar="${R8_JAR:-$script_dir/../tools/r8.jar}"
-    [ -f "$r8_jar" ] || { echo "missing $r8_jar (d8)"; exit 1; }
-    rm -rf "$out/classes" "$out/dex"
-    mkdir -p "$out/classes" "$out/dex"
+# 3) 源码 -> classes*.dex
+r8_jar="${R8_JAR:-$script_dir/../tools/r8.jar}"
+[ -f "$r8_jar" ] || { echo "missing $r8_jar (d8)"; exit 1; }
+rm -rf "$out/classes" "$out/dex"
+mkdir -p "$out/classes" "$out/dex"
+
+    # 无第三方库：只编译我们自己的 Java
     find "$script_dir/java" -name '*.java' > "$out/sources.txt"
-    javac --release 8 -nowarn -cp "$jar" -d "$out/classes" @"$out/sources.txt"
-    java -cp "$r8_jar" com.android.tools.r8.D8 --min-api 26 --lib "$jar" \
+    javac --release 8 -nowarn -encoding UTF-8 -cp "$androidjar" -d "$out/classes" @"$out/sources.txt"
+    java -cp "$r8_jar" com.android.tools.r8.D8 --min-api 26 --lib "$androidjar" \
         --output "$out/dex" $(find "$out/classes" -name '*.class')
-    cp "$out/dex/classes.dex" "$out/apk/classes.dex"
-    ( cd "$out/apk" && zip -q ../base.apk classes.dex )
-    echo "classes.dex: $(stat -c%s "$out/apk/classes.dex") bytes"
-fi
+
+cp "$out"/dex/classes*.dex "$out/apk/"
+( cd "$out/apk" && zip -q ../base.apk classes*.dex )
+echo "dex: $(ls "$out"/dex/classes*.dex | tr '\n' ' ') ($(du -ch "$out"/dex/classes*.dex | tail -1))"
 
 zipalign -f 4 "$out/base.apk" "$out/aligned.apk"
 
-# 3) signing
+# 4) signing
 certs="${SIGNING_CERTS_DIR:-$script_dir/../signing-certs}"
 p12="$certs/codesign/codesign.p12"
 pw="$KEYSTORE_PASSWORD"
@@ -123,6 +126,6 @@ fi
 
 mkdir -p "$distdir"
 echo "APK: $distdir/$name.apk"
-aapt dump badging "$distdir/$name.apk" 2>/dev/null | head -4 || true
-apksigner verify --print-certs "$distdir/$name.apk" 2>/dev/null | head -3 || true
-unzip -l "$distdir/$name.apk"
+"$aa/aapt2" dump badging "$distdir/$name.apk" 2>/dev/null | head -3 || true
+apksigner verify --print-certs "$distdir/$name.apk" 2>/dev/null | head -2 || true
+unzip -l "$distdir/$name.apk" | tail -8

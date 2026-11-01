@@ -19,13 +19,14 @@ KGSL 后端，打包成 APK，FCL 里显示为 **KGSL-Freedreno（OpenGL 4.6）*
 | 项 | 值 |
 |---|---|
 | 包名 | `pkg.freedreno.kgsl` |
-| 版本 | `1.0.2` / `versionCode 3`（tag `v1.0.2`） |
-| APK | `dist/MesaFreedreno-26.3-main.apk` · sha256 `24a5660e5bcee055c5c0892ea26dc8759353e02220f81180abf74a3c2b7ff38c` |
+| 版本 | `1.0.3` / `versionCode 4` |
+| APK | `dist/MesaFreedreno-26.3-main.apk` · sha256 `9ca671483e64679279d4fd1b608b7e93bfea56fdee88689262814cc5db3b7c5d` |
+| APK 体积 | ~5.6 MB（零依赖、扁平列表新 UI） |
 | `libgallium_dri.so` | sha256 `3a09a6cd038d891fba9fb066422cbc1e8d0a7f407dbbc32b97a8e0d3f785e217` |
 | `libEGL_mesa_gl.so` | sha256 `64c1f8ab56512475186f4cbc49adaab329f11abe39ad7e569179c776a106226e` |
 | 签名证书 SHA-256 | `66ab6f193ed3e6d6637d66e0b004a38505b00056f0b7b127da5f1422563362b8` |
 
-版本规则：**versionCode 每次发布会 +1**，versionName 语义化（1.0.1 → 1.0.2 → 1.1 → 2.0），
+版本规则：**versionCode 每次发布会 +1**，versionName 语义化（1.0.1 → 1.0.2 → 1.0.3 → 1.1 → 2.0），
 只有一个发布线（main），没有 debug/release/ubwc 变体。打包后打 tag `vX.Y.Z`。
 
 ## 3. 设备与支持范围
