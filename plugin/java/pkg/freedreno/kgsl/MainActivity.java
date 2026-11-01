@@ -20,7 +20,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
 /**
- * KGSL-Freedreno 插件的调试开关界面。
+ * KGSL-Freedreno（OpenGL 4.6）插件的调试开关界面。
  *
  * 调试开关：FD_MESA_DEBUG 各项、fast clear、GL profile（core/compat 二选一）。
  * 设置写到本应用自己的 Android/media 目录（跨应用可读、写入不需要
@@ -209,7 +209,7 @@ public class MainActivity extends Activity {
         if (cbNobin.isChecked()) dbg.append("nobin,");
 
         StringBuilder out = new StringBuilder();
-        out.append("# Gallium-EXP 插件设置，由 MainActivity 写入\n");
+        out.append("# KGSL-Freedreno（OpenGL 4.6）插件设置，由 MainActivity 写入\n");
         out.append("# force-stop FCL 后生效\n");
         if (dbg.length() > 0) {
             dbg.setLength(dbg.length() - 1);

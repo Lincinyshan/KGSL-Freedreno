@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # 生成 Android aarch64 cross file 并配置 Mesa 构建目录。
 #
-#   MESA_SRC=/path/to/mesa-26.3.0-rc1 \
+#   MESA_SRC=/path/to/mesa-26.3.0-rc3 \
 #   NDK_DIR=/path/to/android-ndk-r30 \
 #   [DEPS_DIR=/path/to/static-libdrm] \
 #   [BUILD_DIR=./build/mesa-26.3] \
@@ -35,7 +35,9 @@ if [ -z "${DEPS_DIR:-}" ]; then
     sed -i "s|^pkg-config = .*|pkg-config = '/usr/bin/pkg-config'|" "$cross"
 fi
 
-meson setup "$BUILD_DIR" "$MESA_SRC" --cross-file "$cross" \
+# --wrap-mode=nodownload：src/freedreno 里 libarchive 是 optional（allow_fallback），
+# 但 meson 仍会去下载 subproject，离线时会把 setup 卡住十几分钟
+meson setup "$BUILD_DIR" "$MESA_SRC" --cross-file "$cross" --wrap-mode=nodownload \
     -Dbuildtype=release -Dstrip=true \
     -Dplatforms=android -Dplatform-sdk-version=35 -Dandroid-stub=true \
     -Dgallium-drivers=freedreno -Dvulkan-drivers= -Dfreedreno-kmds=kgsl \

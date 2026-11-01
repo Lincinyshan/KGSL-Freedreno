@@ -1,7 +1,7 @@
 # Mesa 26.3 改动快照
 
 这里的文件是 **我们改过的上游文件的完整副本**（不是 diff），来源树：
-`vulkan-driver/Mesa-Turnip-Builder/turnip_workdir/mesa-mesa-26.3.0-rc1`。
+`vulkan-driver/Mesa-Turnip-Builder/turnip_workdir/mesa-mesa-26.3.0-rc3`。
 
 应用方式：把文件按 `MAP` 里的对照 **覆盖** 回源码树；回滚就是 git checkout 上游版本。
 

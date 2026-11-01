@@ -1,4 +1,4 @@
-# Mesa 26.3.0-rc1 的 EGL/KGSL 补丁映射
+# Mesa 26.3.0-rc3 的 EGL/KGSL 补丁映射
 # 设备表（把 0x07030002 的条目名从 FD725 改成 Adreno (TM) 730）
 freedreno_devices.py src/freedreno/common/freedreno_devices.py
 platform_android.c   src/egl/drivers/dri2/platform_android.c

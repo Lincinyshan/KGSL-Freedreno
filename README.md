@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20arm64-lightgrey)
 ![GL](https://img.shields.io/badge/OpenGL-4.6%20Core-success)
-![Mesa](https://img.shields.io/badge/Mesa-26.3.0--rc1-orange)
+![Mesa](https://img.shields.io/badge/Mesa-26.3.0--rc3-orange)
 
 给 [FCL](https://github.com/FCL-Team/FoldCraftLauncher)（Minecraft Java 版启动器）用的
 **OpenGL 驱动插件**：Mesa 26.3 的 EGL + freedreno gallium 驱动 + KGSL 后端，
@@ -53,20 +53,26 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
 | Core + 光影 + UBWC | ✅ 已修复 | v1.0.1 前会偶发物品图标噪点/透明，根因是 fence 等待超时单位错误（见下方「修复记录」） |
 | 区块锯齿状空洞 | ℹ️ 原版行为 | 原版「区块构建器：线程化」的官方说明就是“破坏方块时短暂出现图像空洞”，光影下编译慢会更明显 |
 | Adreno 730v3 | ✅ 已验证 | 目标设备（Xiaomi Pad 6 Pro / Android 15 / 内核 5.10） |
-| 其他 Adreno 7xx / 6xx | ❓ 理论可用 | 同一份 `fd6_*` 驱动，但**未实机验证**，见下方说明 |
+| 其他 Adreno 7xx / 6xx | ✅ 理论支持 | 只要 Mesa 上游 freedreno 驱动的设备表里有、且是 KGSL 平台，这份构建就能跑；见下方说明 |
 | 32 位应用 | ❌ 不支持 | 插件只带 `arm64-v8a` |
 | msm DRM 设备 | ❌ 不支持 | 本构建只编了 KGSL 后端 |
 
 ## 适用设备
 
-- 目标 GPU：Qualcomm Adreno 730v3（`chip_id = 0x07030002` → `fd_dev_info` 里是
-  **`a7xx_gen1`**，虽然营销名叫 730）
-- 平台：Android + KGSL（`/dev/kgsl-3d0`，**没有 DRM 节点**），已在 Android 15 / 内核 5.10 验证
+**支持范围 = Mesa 上游 freedreno 驱动的支持范围。**
 
-> [!IMPORTANT]
-> 理论上整个 **Adreno 7xx** 系列都能用，甚至 **6xx**（共用同一份 `fd6_*` 驱动）。
-> 但除 Adreno 730v3 以外我没有设备可以复现问题，**其他机型的兼容问题请不要提 issue**。
-> 换机测试时先用 `tools/gltest` 的 `UBWC-*` 用例自检。
+这个项目本质就是“Mesa 26.3 的 freedreno + KGSL 后端”打包成 FCL 插件，所以：
+
+- **Mesa 上游 `freedreno_devices.py` 设备表里有的 GPU，且平台用 KGSL（`/dev/kgsl-3d0`）** → 理论上都能跑，
+  包括 Adreno 6xx / 7xx / 8xx（同一份 `fd6_*` 驱动）；
+- 已在 **Adreno 730v3**（`chip_id = 0x07030002` → `a7xx_gen1`，Xiaomi Pad 6 Pro / Android 15 / 内核 5.10）上验证；
+- **不要求** 32 位（只带 `arm64-v8a`），**不支持** 纯 msm DRM 设备（本构建只编了 KGSL 后端）。
+
+> [!TIP]
+> 换到别的机器上如果跑不起来：先看 logcat / 游戏日志里有没有
+> `unsupported GPU: aXXX` 或 EGL 初始化错误，把日志交给 AI，让它开一个 fork 适配即可
+> —— 这个项目本身就是这么来的（KGSL 后端、设备表、fence 超时都是这么定位的）。
+> 自检可以先跑 `tools/gltest` 的 `UBWC-*` 用例。
 
 ## 安装
 
@@ -97,7 +103,7 @@ Minecraft 拿到的是一块真正的 4.6 上下文，而不是 GLES 包装或 V
 ```text
 OpenGL Vendor:   freedreno
 GL_RENDERER:     Adreno (TM) 730
-GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc1
+GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc3
 ```
 
 ## 调试开关
@@ -134,7 +140,7 @@ GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc1
 
 | 组件 | 说明 |
 |---|---|
-| Mesa 源码 | 26.3.0-rc1（`MESA_SRC`） |
+| Mesa 源码 | 26.3.0-rc3（`MESA_SRC`） |
 | Android NDK | r30，含 API 35 sysroot（`NDK_DIR`） |
 | Android SDK | `build-tools`（`aapt2` / `apksigner` / `zipalign`） |
 | meson / ninja | `meson` ≥ 1.3 |
@@ -142,7 +148,7 @@ GL_VERSION:      4.6 (Core Profile) Mesa 26.3.0-rc1
 
 ```bash
 # 1) 配置 Mesa 构建目录（只需一次）
-export MESA_SRC=/path/to/mesa-26.3.0-rc1
+export MESA_SRC=/path/to/mesa-26.3.0-rc3
 export NDK_DIR=/path/to/android-ndk-r30
 export DEPS_DIR=/path/to/static-deps     # 可选：静态 libdrm
 scripts/setup-build.sh

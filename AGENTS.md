@@ -11,7 +11,7 @@ Mesa 26.3 的 EGL + **freedreno gallium 驱动** + **KGSL 后端**，打包成 F
   **`a7xx_gen1`**（不是 a6xx，虽然营销名是 730）
 - 目标平台：Android + KGSL（`/dev/kgsl-3d0`，**没有 DRM 节点**）。已在 Android 15 /
   内核 5.10 的 Xiaomi Pad 6 Pro 上验证，理论上适用于同代 KGSL 设备
-- 上游：Mesa 26.3.0-rc1。这是**下游 fork**，产物只做 FCL 插件，不往上游提 MR
+- 上游：Mesa 26.3.0-rc3。这是**下游 fork**，产物只做 FCL 插件，不往上游提 MR
 
 ## 目录
 
@@ -32,14 +32,14 @@ dist/                 产物（gitignore）
 
 | 组件 | 说明 |
 |---|---|
-| Mesa 源码 | 26.3.0-rc1（`MESA_SRC` 指定） |
+| Mesa 源码 | 26.3.0-rc3（`MESA_SRC` 指定） |
 | Android NDK | r30，含 API 35 sysroot（`NDK_DIR` 指定） |
 | Android SDK | `build-tools`（`aapt2` / `apksigner` / `zipalign`） |
 | meson / ninja | `meson` ≥ 1.3 |
 | 可选 | 静态 `libdrm`（`DEPS_DIR`，见下） |
 
 ```bash
-export MESA_SRC=/path/to/mesa-26.3.0-rc1
+export MESA_SRC=/path/to/mesa-26.3.0-rc3
 export NDK_DIR=/path/to/android-ndk-r30
 export BUILD_DIR=/path/to/build/mesa-26.3      # 可选，默认 ./build/mesa-26.3
 scripts/setup-build.sh                          # 生成 cross file + meson setup
@@ -61,7 +61,7 @@ cd plugin && ./build.sh                         # → dist/MesaFreedreno-26.3-ma
 | 项 | 值 |
 |---|---|
 | package | `pkg.freedreno.kgsl`（单一包名） |
-| 版本 | 语义化版本，当前 `1.0.1`（`versionCode` 每次递增）；只有一条主线，不要 release/debug/ubwc 变体 |
+| 版本 | 语义化版本，当前 `1.0.2`（`versionCode` 每次递增）；只有一条主线，不要 release/debug/ubwc 变体 |
 | FCL 显示名 | `des` 和 `renderer` 首段都是 `KGSL-Freedreno（OpenGL 4.6）`（全角括号） |
 | 应用名 | `Mesa Freedreno A730 (26.3 UBWC)` |
 | MC 版本 | 不限：`minMCVer`/`maxMCVer` 留空 |
@@ -87,8 +87,9 @@ MC 自己的 `#version 140` + UBO 在两条 profile 下都只是告警。
 ## 改 Mesa 的规矩
 
 1. 先读代码再改；改完把**整个文件**拷进 `mesa/patches/`，新增文件要同时加进 `mesa/patches/MAP`。
-2. KGSL 后端是 SolDev69/freedreno-gallium-mesa（24.1.2）原版，只保留 3 处 26.x 适配
-   （`dev->features`、`.reset_status`、suballoc IB 地址），见 `mesa/patches/kgsl/README.md`。
+2. KGSL 后端是 SolDev69/freedreno-gallium-mesa（24.1.2）原版，只保留 4 处 26.x 适配
+   （`dev->features`、`.reset_status`、suballoc IB 地址、fence 等待超时单位），
+   见 `mesa/patches/kgsl/README.md`。
    不要再加自研的 pending 释放队列 / 强制 IOCOHERENT / cache 维护，除非有实测证据。
 3. 改 flush / CCU / UBWC 时 **a6xx 和 a7xx 两条分支都要看**：目标机是 a7xx，
    但代码里同时存在 `CHIP == A6XX` 分支。
